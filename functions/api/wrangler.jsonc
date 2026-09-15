@@ -1,0 +1,10 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "noke-football",
+  "main": "./_worker.js",
+  "compatibility_date": "2026-09-15",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS"
+  }
+}
