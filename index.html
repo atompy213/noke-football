@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noke Football</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #0b1020;
+    color: #f5f7ff;
+}
+
+header {
+    background: #121a2e;
+    border-bottom: 1px solid #27324d;
+    padding: 20px 28px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.header-inner {
+    max-width: 1200px;
+    margin: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.logo {
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.logo span {
+    color: #67a4ff;
+}
+
+.status {
+    font-size: 13px;
+    color: #8f9bb5;
+}
+
+nav {
+    background: #10172a;
+    border-bottom: 1px solid #27324d;
+    overflow-x: auto;
+}
+
+.nav-inner {
+    max-width: 1200px;
+    margin: auto;
+    display: flex;
+}
+
+nav button {
+    border: 0;
+    background: none;
+    color: #929db5;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+nav button.active {
+    color: white;
+    border-bottom: 3px solid #67a4ff;
+}
+
+main {
+    max-width: 1200px;
+    margin: auto;
+    padding: 28px 20px 60px;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+h1 {
+    margin-top: 0;
+    font-size: 30px;
+}
+
+h2 {
+    font-size: 20px;
+    margin-top: 0;
+}
+
+.subtitle {
+    color: #8f9bb5;
+    margin-top: -15px;
+    margin-bottom: 25px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: #121a2e;
+    border: 1px solid #27324d;
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.big-number {
+    font-size: 34px;
+    font-weight: 800;
+    margin: 8px 0;
+}
+
+.muted {
+    color: #8f9bb5;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 13px 10px;
+    border-bottom: 1px solid #27324d;
+}
+
+th {
+    color: #8f9bb5;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+tr:last-child td {
+    border-bottom: 0;
+}
+
+.rank {
+    font-weight: 800;
+    width: 45px;
+}
+
+.team-name {
+    font-weight: 700;
+}
+
+.record {
+    color: #9eabc6;
+}
+
+.good {
+    color: #68d391;
+}
+
+.bad {
+    color: #fc8181;
+}
+
+.loading {
+    text-align: center;
+    padding: 80px 20px;
+    color: #8f9bb5;
+}
+
+.error {
+    background: #321923;
+    border: 1px solid #713044;
+    color: #ffb4c4;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.matchup {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 20px;
+}
+
+.team-box {
+    background: #0d1425;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.team-box strong {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.score {
+    font-size: 32px;
+    font-weight: 800;
+}
+
+.vs {
+    color: #65718b;
+    font-weight: 800;
+}
+
+.badge {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 20px;
+    background: #202c48;
+    color: #aeb9d1;
+    font-size: 12px;
+}
+
+@media (max-width: 650px) {
+    .header-inner {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    main {
+        padding: 20px 14px;
+    }
+
+    .matchup {
+        grid-template-columns: 1fr;
+    }
+
+    .vs {
+        text-align: center;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="logo">🏈 <span>Noke</span> Football</div>
+        <div class="status" id="status">Connecting to Sleeper...</div>
+    </div>
+</header>
+
+<nav>
+    <div class="nav-inner">
+        <button class="active" onclick="showPage('dashboard', this)">Dashboard</button>
+        <button onclick="showPage('rankings', this)">Power Rankings</button>
+        <button onclick="showPage('players', this)">Player Trends</button>
+        <button onclick="showPage('playoffs', this)">Playoff Picture</button>
+    </div>
+</nav>
+
+<main>
+
+<section id="dashboard" class="page active">
+
+    <h1>League Dashboard</h1>
+    <p class="subtitle">Live Noke Football league data</p>
+
+    <div id="dashboardContent">
+        <div class="loading">Loading your league...</div>
+    </div>
+
+</section>
+
+
+<section id="rankings" class="page">
+
+    <h1>Power Rankings</h1>
+    <p class="subtitle">Who's actually running the league?</p>
+
+    <div class="card">
+        <div id="rankingsContent">
+            <div class="loading">Loading rankings...</div>
+        </div>
+    </div>
+
+</section>
+
+
+<section id="players" class="page">
+
+    <h1>Player Trends</h1>
+    <p class="subtitle">Who's gaining momentum around the league?</p>
+
+    <div class="grid">
+
+        <div class="card">
+            <h2>🔥 Trending Adds</h2>
+            <div id="adds">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📉 Trending Drops</h2>
+            <div id="drops">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+
+<section id="playoffs" class="page">
+
+    <h1>Playoff Picture</h1>
+    <p class="subtitle">Current standings and postseason positioning</p>
+
+    <div class="card">
+        <div id="playoffsContent">
+            <div class="loading">Loading playoff picture...</div>
+        </div>
+    </div>
+
+</section>
+
+</main>
+
+<script>
+
+const CONFIG = {
+    leagueId: "1387224646096539648",
+    username: "Atompski"
+};
+
+
+/* -------------------------------------------------------
+   API
+------------------------------------------------------- */
+
+async function api(path) {
+
+    const response = await fetch(
+        "/api/sleeper?path=" + encodeURIComponent(path)
+    );
+
+    if (!response.ok) {
+        throw new Error("API request failed: " + response.status);
+    }
+
+    return await response.json();
+}
+
+
+/* -------------------------------------------------------
+   NAVIGATION
+------------------------------------------------------- */
+
+function showPage(page, button) {
+
+    document.querySelectorAll(".page").forEach(p => {
+        p.classList.remove("active");
+    });
+
+    document.getElementById(page).classList.add("active");
+
+    document.querySelectorAll("nav button").forEach(b => {
+        b.classList.remove("active");
+    });
+
+    button.classList.add("active");
+}
+
+
+/* -------------------------------------------------------
+   HELPERS
+------------------------------------------------------- */
+
+function getTeamName(rosterId, users) {
+
+    const user = users.find(
+        u => Number(u.roster_id) === Number(rosterId)
+    );
+
+    if (!user) return "Team " + rosterId;
+
+    if (user.metadata && user.metadata.team_name) {
+        return user.metadata.team_name;
+    }
+
+    return user.display_name || user.username || "Team " + rosterId;
+}
+
+
+function recordForRoster(rosterId, matchups) {
+
+    let wins = 0;
+    let losses = 0;
+
+    for (const matchup of matchups) {
+
+        const myScore = matchup
+            .find(x => Number(x.roster_id) === Number(rosterId));
+
+        if (!myScore) continue;
+
+        const opponent = matchup.find(
+            x => Number(x.roster_id) !== Number(rosterId)
+        );
+
+        if (!opponent) continue;
+
+        if (Number(myScore.points) > Number(opponent.points)) {
+            wins++;
+        } else if (Number(myScore.points) < Number(opponent.points)) {
+            losses++;
+        }
+    }
+
+    return { wins, losses };
+}
+
+
+function makeList(items, emptyText) {
+
+    if (!items || items.length === 0) {
+        return `<p class="muted">${emptyText}</p>`;
+    }
+
+    return items.map((item, index) => {
+
+        const name =
+            item.player_id ||
+            item.player ||
+            "Unknown Player";
+
+        return `
+            <div style="
+                padding:12px 0;
+                border-bottom:1px solid #27324d;
+                display:flex;
+                justify-content:space-between;
+            ">
+                <strong>${index + 1}. ${name}</strong>
+                <span class="badge">${item.count || item.trend || ""}</span>
+            </div>
+        `;
+
+    }).join("");
+}
+
+
+/* -------------------------------------------------------
+   LOAD DASHBOARD
+------------------------------------------------------- */
+
+async function loadDashboard() {
+
+    try {
+
+        const [league, users, rosters, state] =
+            await Promise.all([
+                api(`/league/${CONFIG.leagueId}`),
+                api(`/league/${CONFIG.leagueId}/users`),
+                api(`/league/${CONFIG.leagueId}/rosters`),
+                api(`/state/nfl`)
+            ]);
+
+        const currentWeek = Number(state.week || 1);
+
+        document.getElementById("status").textContent =
+            `Week ${currentWeek} • Live Sleeper Data`;
+
+        let matchupData = [];
+
+        try {
+            matchupData = await api(
+                `/league/${CONFIG.leagueId}/matchups/${currentWeek}`
+            );
+        } catch (e) {
+            matchupData = [];
+        }
+
+        const grouped = {};
+
+        matchupData.forEach(m => {
+
+            if (!grouped[m.matchup_id]) {
+                grouped[m.matchup_id] = [];
+            }
+
+            grouped[m.matchup_id].push(m);
+        });
+
+        const matchupGroups = Object.values(grouped);
+
+        let html = "";
+
+        html += `
+            <div class="grid">
+
+                <div class="card">
+                    <div class="muted">League</div>
+                    <div class="big-number">${league.name}</div>
+                    <div class="muted">10-team half-PPR</div>
+                </div>
+
+                <div class="card">
+                    <div class="muted">Season</div>
+                    <div class="big-number">${league.season}</div>
+                    <div class="muted">Current Week ${currentWeek}</div>
+                </div>
+
+                <div class="card">
+                    <div class="muted">Teams</div>
+                    <div class="big-number">${rosters.length}</div>
+                    <div class="muted">Active rosters</div>
+                </div>
+
+            </div>
+        `;
+
+        html += `<div class="card"><h2>Current Matchups</h2>`;
+
+        if (matchupGroups.length === 0) {
+
+            html += `<p class="muted">
+                No current matchup data is available yet.
+            </p>`;
+
+        } else {
+
+            html += `<div class="grid">`;
+
+            matchupGroups.forEach(group => {
+
+                if (group.length < 2) return;
+
+                const a = group[0];
+                const b = group[1];
+
+                html += `
+                    <div class="matchup">
+
+                        <div class="team-box">
+                            <strong>
+                                ${getTeamName(a.roster_id, users)}
+                            </strong>
+                            <div class="score">
+                                ${Number(a.points || 0).toFixed(2)}
+                            </div>
+                        </div>
+
+                        <div class="vs">VS</div>
+
+                        <div class="team-box">
+                            <strong>
+                                ${getTeamName(b.roster_id, users)}
+                            </strong>
+                            <div class="score">
+                                ${Number(b.points || 0).toFixed(2)}
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+
+            });
+
+            html += `</div>`;
+        }
+
+        html += `</div>`;
+
+        document.getElementById("dashboardContent").innerHTML = html;
+
+        await loadRankings(users, rosters, currentWeek);
+
+    } catch (error) {
+
+        console.error(error);
+
+        document.getElementById("status").textContent =
+            "Connection error";
+
+        document.getElementById("dashboardContent").innerHTML = `
+            <div class="error">
+                <strong>Couldn't connect to Sleeper.</strong>
+                <br><br>
+                ${error.message}
+            </div>
+        `;
+    }
+}
+
+
+/* -------------------------------------------------------
+   POWER RANKINGS
+------------------------------------------------------- */
+
+async function loadRankings(users, rosters, currentWeek) {
+
+    try {
+
+        const matchups = [];
+
+        for (let week = 1; week <= currentWeek; week++) {
+
+            try {
+
+                const data = await api(
+                    `/league/${CONFIG.leagueId}/matchups/${week}`
+                );
+
+                matchups.push(data);
+
+            } catch (e) {}
+
+        }
+
+        const rankings = rosters.map(roster => {
+
+            let wins = 0;
+            let losses = 0;
+            let points = 0;
+
+            matchups.forEach(week => {
+
+                const team = week.find(
+                    x => Number(x.roster_id) === Number(roster.roster_id)
+                );
+
+                if (!team) return;
+
+                points += Number(team.points || 0);
+
+                const opponent = week.find(
+                    x => Number(x.roster_id) !== Number(roster.roster_id) &&
+                    Number(x.matchup_id) === Number(team.matchup_id)
+                );
+
+                if (!opponent) return;
+
+                if (Number(team.points) > Number(opponent.points)) {
+                    wins++;
+                } else if (Number(team.points) < Number(opponent.points)) {
+                    losses++;
+                }
+
+            });
+
+            return {
+                roster,
+                name: getTeamName(roster.roster_id, users),
+                wins,
+                losses,
+                points
+            };
+
+        });
+
+        rankings.sort((a, b) => {
+
+            if (b.wins !== a.wins) {
+                return b.wins - a.wins;
+            }
+
+            return b.points - a.points;
+
+        });
+
+        document.getElementById("rankingsContent").innerHTML = `
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Team</th>
+                        <th>Record</th>
+                        <th>Points</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    ${rankings.map((team, index) => `
+
+                        <tr>
+
+                            <td class="rank">
+                                ${index + 1}
+                            </td>
+
+                            <td class="team-name">
+                                ${team.name}
+                            </td>
+
+                            <td class="record">
+                                ${team.wins}-${team.losses}
+                            </td>
+
+                            <td>
+                                ${team.points.toFixed(2)}
+                            </td>
+
+                        </tr>
+
+                    `).join("")}
+
+                </tbody>
+
+            </table>
+        `;
+
+        await loadTrends();
+
+        await loadPlayoffs(rankings);
+
+    } catch (error) {
+
+        document.getElementById("rankingsContent").innerHTML = `
+            <div class="error">
+                Unable to load rankings.
+            </div>
+        `;
+    }
+}
+
+
+/* -------------------------------------------------------
+   PLAYER TRENDS
+------------------------------------------------------- */
+
+async function loadTrends() {
+
+    try {
+
+        const [adds, drops] = await Promise.all([
+            api("/players/nfl/trending/add"),
+            api("/players/nfl/trending/drop")
+        ]);
+
+        document.getElementById("adds").innerHTML =
+            makeList(adds.slice(0, 10), "No trending adds found.");
+
+        document.getElementById("drops").innerHTML =
+            makeList(drops.slice(0, 10), "No trending drops found.");
+
+    } catch (error) {
+
+        document.getElementById("adds").innerHTML =
+            `<p class="muted">Unable to load trends.</p>`;
+
+        document.getElementById("drops").innerHTML =
+            `<p class="muted">Unable to load trends.</p>`;
+    }
+}
+
+
+/* -------------------------------------------------------
+   PLAYOFF PICTURE
+------------------------------------------------------- */
+
+async function loadPlayoffs(rankings) {
+
+    const playoffTeams = 6;
+
+    document.getElementById("playoffsContent").innerHTML = `
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Seed</th>
+                    <th>Team</th>
+                    <th>Record</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                ${rankings.map((team, index) => {
+
+                    let status;
+
+                    if (index < playoffTeams) {
+                        status =
+                            `<span class="badge good">Playoff Position</span>`;
+                    } else {
+                        status =
+                            `<span class="badge">Outside</span>`;
+                    }
+
+                    return `
+
+                        <tr>
+
+                            <td class="rank">
+                                ${index + 1}
+                            </td>
+
+                            <td class="team-name">
+                                ${team.name}
+                            </td>
+
+                            <td>
+                                ${team.wins}-${team.losses}
+                            </td>
+
+                            <td>
+                                ${status}
+                            </td>
+
+                        </tr>
+                    `;
+
+                }).join("")}
+
+            </tbody>
+
+        </table>
+
+        <p class="muted" style="margin-top:18px;">
+            Playoff positioning is based on the current standings.
+            Official playoff bracket information will be added in the next version.
+        </p>
+    `;
+}
+
+
+/* -------------------------------------------------------
+   START
+------------------------------------------------------- */
+
+loadDashboard();
+
+</script>
+
+</body>
+</html>
