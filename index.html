@@ -5,7 +5,142 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Noke Football</title>
+.player-info-section {
+  margin-bottom: 25px;
+}
 
+.player-search {
+  padding: 20px;
+  border-bottom: 1px solid #292c32;
+}
+
+.player-search input {
+  width: 100%;
+  max-width: 500px;
+  background: #101114;
+  color: #f5f5f5;
+  border: 1px solid #3a3d45;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+}
+
+.player-search input:focus {
+  outline: none;
+  border-color: #4d8cff;
+}
+
+.player-search-results {
+  margin-top: 10px;
+  max-width: 500px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.player-search-result {
+  padding: 12px;
+  border: 1px solid #292c32;
+  background: #101114;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.player-search-result:hover {
+  background: #22252c;
+}
+
+.search-player-name {
+  font-weight: bold;
+}
+
+.search-player-details {
+  color: #888;
+  font-size: 13px;
+}
+
+.player-card {
+  padding: 25px;
+}
+
+.player-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #292c32;
+}
+
+.player-card-name {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.player-card-position {
+  color: #999;
+  margin-top: 5px;
+}
+
+.player-status {
+  padding: 7px 12px;
+  border-radius: 20px;
+  background: #25282e;
+  color: #ccc;
+  font-size: 13px;
+}
+
+.player-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.player-info-item {
+  background: #101114;
+  border: 1px solid #2c2f36;
+  border-radius: 10px;
+  padding: 15px;
+}
+
+.player-info-label {
+  color: #888;
+  font-size: 12px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.player-info-value {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+@media (max-width: 800px) {
+  .player-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .player-card-header {
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .player-card-name {
+    font-size: 23px;
+  }
+}
+
+@media (max-width: 500px) {
+  .player-info-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .player-info-item {
+    padding: 12px;
+  }
+}
 <style>
 
 * {
@@ -281,7 +416,30 @@ section h2 {
     color: #777;
     text-align: center;
 }
+<section class="player-info-section">
+  <h2>🏈 Player Info</h2>
 
+  <div class="description">
+    Search the Sleeper player database for player information.
+  </div>
+
+  <div class="player-search">
+    <input
+      type="text"
+      id="playerSearch"
+      placeholder="Search for a player..."
+      autocomplete="off"
+    >
+
+    <div id="playerSearchResults" class="player-search-results"></div>
+  </div>
+
+  <div id="playerInfo">
+    <div class="empty-roster">
+      Search for a player to view information.
+    </div>
+  </div>
+</section>
 
 /* =========================
    TABLES
@@ -1299,7 +1457,8 @@ async function loadLeague() {
         /* =========================
            POWER RANKINGS
            ========================= */
-
+setupPlayerSearch();
+        
         loadPowerRankings(
             teamsData
         );
@@ -2422,7 +2581,211 @@ function escapeHTML(
 /* =========================
    START
    ========================= */
+let allPlayers = [];
 
+function setupPlayerSearch() {
+  const searchInput = document.getElementById("playerSearch");
+  const resultsContainer = document.getElementById("playerSearchResults");
+
+  allPlayers = Object.entries(playersData)
+    .map(([id, player]) => ({
+      id,
+      ...player
+    }))
+    .filter(player => {
+      return (
+        player.full_name ||
+        player.first_name ||
+        player.last_name
+      );
+    });
+
+  searchInput.addEventListener("input", function() {
+    const search = this.value.trim().toLowerCase();
+
+    resultsContainer.innerHTML = "";
+
+    if (!search) {
+      return;
+    }
+
+    const results = allPlayers
+      .filter(player => {
+        const name = getPlayerName(player).toLowerCase();
+        const team = (player.team || "").toLowerCase();
+        const position = (player.position || "").toLowerCase();
+
+        return (
+          name.includes(search) ||
+          team.includes(search) ||
+          position.includes(search)
+        );
+      })
+      .slice(0, 15);
+
+    if (!results.length) {
+      resultsContainer.innerHTML =
+        '<div class="empty-roster">No players found.</div>';
+      return;
+    }
+
+    results.forEach(player => {
+      const result = document.createElement("div");
+      result.className = "player-search-result";
+
+      result.innerHTML = `
+        <div>
+          <div class="search-player-name">
+            ${escapeHTML(getPlayerName(player))}
+          </div>
+          <div class="search-player-details">
+            ${escapeHTML(player.position || "—")}
+            ${player.team ? " • " + escapeHTML(player.team) : ""}
+          </div>
+        </div>
+      `;
+
+      result.addEventListener("click", function() {
+        showPlayerInfo(player);
+
+        searchInput.value = getPlayerName(player);
+        resultsContainer.innerHTML = "";
+      });
+
+      resultsContainer.appendChild(result);
+    });
+  });
+}
+
+
+function getPlayerName(player) {
+  const firstName = player.first_name || "";
+  const lastName = player.last_name || "";
+
+  const name = (firstName + " " + lastName).trim();
+
+  return name || player.full_name || "Unknown Player";
+}
+
+
+function showPlayerInfo(player) {
+  const container = document.getElementById("playerInfo");
+
+  const name = getPlayerName(player);
+
+  const position = player.position || "—";
+  const nflTeam = player.team || "Free Agent";
+  const age = player.age || "—";
+  const height = player.height || "—";
+  const weight = player.weight
+    ? player.weight + " lbs"
+    : "—";
+
+  const college = player.college || "—";
+
+  const yearsExperience =
+    player.years_exp !== undefined &&
+    player.years_exp !== null
+      ? player.years_exp
+      : "—";
+
+  const injuryStatus =
+    player.injury_status ||
+    player.status ||
+    "Healthy / No status listed";
+
+  const jerseyNumber =
+    player.number !== undefined &&
+    player.number !== null
+      ? "#" + player.number
+      : "—";
+
+  container.innerHTML = `
+    <div class="player-card">
+
+      <div class="player-card-header">
+
+        <div>
+          <div class="player-card-name">
+            ${escapeHTML(name)}
+          </div>
+
+          <div class="player-card-position">
+            ${escapeHTML(position)}
+            •
+            ${escapeHTML(nflTeam)}
+          </div>
+        </div>
+
+        <div class="player-status">
+          ${escapeHTML(injuryStatus)}
+        </div>
+
+      </div>
+
+      <div class="player-info-grid">
+
+        <div class="player-info-item">
+          <div class="player-info-label">Position</div>
+          <div class="player-info-value">
+            ${escapeHTML(position)}
+          </div>
+        </div>
+
+        <div class="player-info-item">
+          <div class="player-info-label">NFL Team</div>
+          <div class="player-info-value">
+            ${escapeHTML(nflTeam)}
+          </div>
+        </div>
+
+        <div class="player-info-item">
+          <div class="player-info-label">Age</div>
+          <div class="player-info-value">
+            ${escapeHTML(age)}
+          </div>
+        </div>
+
+        <div class="player-info-item">
+          <div class="player-info-label">Jersey</div>
+          <div class="player-info-value">
+            ${escapeHTML(jerseyNumber)}
+          </div>
+        </div>
+
+        <div class="player-info-item">
+          <div class="player-info-label">Height</div>
+          <div class="player-info-value">
+            ${escapeHTML(height)}
+          </div>
+        </div>
+
+        <div class="player-info-item">
+          <div class="player-info-label">Weight</div>
+          <div class="player-info-value">
+            ${escapeHTML(weight)}
+          </div>
+        </div>
+
+        <div class="player-info-item">
+          <div class="player-info-label">College</div>
+          <div class="player-info-value">
+            ${escapeHTML(college)}
+          </div>
+        </div>
+
+        <div class="player-info-item">
+          <div class="player-info-label">NFL Experience</div>
+          <div class="player-info-value">
+            ${escapeHTML(yearsExperience)}
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
 loadLeague();
 
 </script>
