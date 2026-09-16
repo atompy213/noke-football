@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Noke Football</title>
 
   <style>
+
     * {
       box-sizing: border-box;
     }
@@ -357,6 +359,17 @@
       line-height: 1.5;
     }
 
+    /* FANTASYCALC STATUS */
+
+    .fantasycalc-status {
+      margin: 12px 0 18px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      background: #f8fafc;
+      color: #64748b;
+    }
+
     /* LEAGUE HISTORY */
 
     .history-list {
@@ -503,12 +516,9 @@
 
 <div class="container">
 
-  <!-- CONNECTION STATUS -->
-
   <div id="connectionStatus" class="connection">
     Connecting to Sleeper...
   </div>
-
 
   <!-- TEAM DASHBOARD -->
 
@@ -610,9 +620,24 @@
 
     <h2>🔄 Trade Calculator</h2>
 
-    <p style="color:#64748b; margin-top:-5px;">
-      Build a trade between two teams using Noke Football's estimated trade values.
+    <p
+      style="
+        color:#64748b;
+        margin-top:-5px;
+      "
+    >
+      Build a trade between two teams using current FantasyCalc
+      market values.
     </p>
+
+
+    <div
+      id="fantasyCalcStatus"
+      class="fantasycalc-status"
+    >
+      Loading FantasyCalc values...
+    </div>
+
 
     <div class="trade-teams">
 
@@ -660,7 +685,6 @@
 
     <div class="trade-builder">
 
-
       <!-- TEAM A -->
 
       <div class="trade-side">
@@ -689,7 +713,7 @@
         <div class="trade-total">
 
           <div>
-            Total Trade Value
+            Total FantasyCalc Value
           </div>
 
           <div
@@ -732,7 +756,7 @@
         <div class="trade-total">
 
           <div>
-            Total Trade Value
+            Total FantasyCalc Value
           </div>
 
           <div
@@ -761,19 +785,21 @@
 
       <strong>How the value works:</strong>
 
-      Noke Trade Value is an estimate generated from Sleeper player
-      information, including position, age, depth-chart role, player
-      status, and Sleeper's player search ranking.
+      Trade values come from FantasyCalc's current market-value
+      model based on real fantasy football trades. FantasyCalc
+      adjusts values for league settings such as PPR, league size,
+      and QB format.
 
-      It is not an official Sleeper trade value or a prediction of
-      future fantasy production.
+      The website first attempts to retrieve current values directly
+      from FantasyCalc. If that request is unavailable, it automatically
+      uses the latest FantasyCalc data stored in this GitHub repository.
 
     </div>
 
   </div>
 
 
-  <!-- LEAGUE INFO -->
+  <!-- LEAGUE INFORMATION -->
 
   <div class="section">
 
@@ -798,8 +824,8 @@
 
     <p style="color:#64748b;">
 
-      Custom ranking based on 60% win percentage and 40% points scored
-      relative to the highest-scoring team.
+      Custom ranking based on 60% win percentage and
+      40% points scored relative to the highest-scoring team.
 
     </p>
 
@@ -830,9 +856,11 @@
     </p>
 
     <div id="pastChampions">
+
       <div class="history-loading">
         Loading championship history...
       </div>
+
     </div>
 
   </div>
@@ -863,14 +891,17 @@
 
 <script>
 
-
 /* =========================================================
-   SETTINGS
+   CONFIGURATION
 ========================================================= */
 
 const LEAGUE_ID =
   "1387224646096539648";
 
+
+/* =========================================================
+   GLOBAL VARIABLES
+========================================================= */
 
 let leagueData = null;
 
@@ -883,8 +914,6 @@ let allPlayers = [];
 let selectedTeamId = null;
 
 
-/* TRADE CALCULATOR */
-
 let tradeSideA = [];
 
 let tradeSideB = [];
@@ -892,6 +921,25 @@ let tradeSideB = [];
 let tradeTeamAId = null;
 
 let tradeTeamBId = null;
+
+
+/* =========================================================
+   FANTASYCALC
+========================================================= */
+
+let fantasyCalcValues = {};
+
+let fantasyCalcSource = "none";
+
+let fantasyCalcLoaded = false;
+
+
+const FANTASYCALC_API =
+  "https://api.fantasycalc.com/values/current";
+
+
+const FANTASYCALC_FALLBACK =
+  "./fantasycalc-values.json";
 
 
 /* =========================================================
@@ -906,6 +954,7 @@ async function sleeper(path) {
       path
     );
 
+
   if (!response.ok) {
 
     throw new Error(
@@ -917,13 +966,455 @@ async function sleeper(path) {
 
   }
 
+
   return await response.json();
 
 }
 
 
 /* =========================================================
-   INITIAL LOAD
+   LOAD FANTASYCALC
+========================================================= */
+
+async function loadFantasyCalcValues() {
+
+  fantasyCalcLoaded =
+    false;
+
+  fantasyCalcSource =
+    "none";
+
+  fantasyCalcValues = {};
+
+
+  /*
+   * First attempt:
+   * direct FantasyCalc API.
+   */
+
+  try {
+
+    const numTeams =
+      teamsData.length ||
+      10;
+
+
+    const scoring =
+      leagueData?.scoring_settings ||
+      {};
+
+
+    let ppr = 0;
+
+
+    /*
+     * Standard PPR
+     */
+
+    if (
+      Number(scoring.rec) >= 0.99
+    ) {
+
+      ppr = 1;
+
+    }
+
+
+    /*
+     * Half PPR
+     */
+
+    else if (
+      Number(scoring.rec) >= 0.49
+    ) {
+
+      ppr = 0.5;
+
+    }
+
+
+    /*
+     * Detect Superflex / 2QB
+     */
+
+    const rosterPositions =
+      leagueData?.roster_positions ||
+      [];
+
+
+    const superflexCount =
+      rosterPositions.filter(
+        position =>
+          position === "SUPER_FLEX"
+      ).length;
+
+
+    const numQbs =
+      superflexCount > 0
+        ? 2
+        : 1;
+
+
+    const url =
+      FANTASYCALC_API +
+      "?isDynasty=true" +
+      "&numQbs=" +
+      numQbs +
+      "&numTeams=" +
+      numTeams +
+      "&ppr=" +
+      ppr;
+
+
+    console.log(
+      "Trying live FantasyCalc:",
+      url
+    );
+
+
+    const response =
+      await fetch(
+        url,
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "FantasyCalc API returned " +
+        response.status
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    buildFantasyCalcMap(
+      data
+    );
+
+
+    if (
+      Object.keys(
+        fantasyCalcValues
+      ).length === 0
+    ) {
+
+      throw new Error(
+        "FantasyCalc returned no usable player values."
+      );
+
+    }
+
+
+    fantasyCalcSource =
+      "live";
+
+    fantasyCalcLoaded =
+      true;
+
+
+    console.log(
+      "FantasyCalc live values loaded:",
+      Object.keys(
+        fantasyCalcValues
+      ).length
+    );
+
+
+    updateFantasyCalcStatus();
+
+    refreshTradeCalculator();
+
+
+    return true;
+
+
+  } catch (error) {
+
+    console.warn(
+      "Live FantasyCalc request failed.",
+      error
+    );
+
+  }
+
+
+  /*
+   * FALLBACK:
+   *
+   * Use the JSON file committed
+   * to GitHub by the GitHub Action.
+   */
+
+  try {
+
+    const response =
+      await fetch(
+        FANTASYCALC_FALLBACK +
+        "?v=" +
+        Date.now(),
+        {
+          cache: "no-store"
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Fallback file returned " +
+        response.status
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    buildFantasyCalcMap(
+      data
+    );
+
+
+    if (
+      Object.keys(
+        fantasyCalcValues
+      ).length === 0
+    ) {
+
+      throw new Error(
+        "Fallback file contains no usable FantasyCalc values."
+      );
+
+    }
+
+
+    fantasyCalcSource =
+      "github";
+
+    fantasyCalcLoaded =
+      true;
+
+
+    console.log(
+      "FantasyCalc GitHub fallback loaded:",
+      Object.keys(
+        fantasyCalcValues
+      ).length
+    );
+
+
+    updateFantasyCalcStatus();
+
+    refreshTradeCalculator();
+
+
+    return true;
+
+
+  } catch (error) {
+
+    console.error(
+      "FantasyCalc fallback failed.",
+      error
+    );
+
+
+    fantasyCalcSource =
+      "unavailable";
+
+    fantasyCalcLoaded =
+      false;
+
+
+    updateFantasyCalcStatus();
+
+    refreshTradeCalculator();
+
+
+    return false;
+
+  }
+
+}
+
+
+/* =========================================================
+   BUILD FANTASYCALC MAP
+========================================================= */
+
+function buildFantasyCalcMap(data) {
+
+  fantasyCalcValues = {};
+
+
+  /*
+   * FantasyCalc may return an array
+   * directly or an object containing
+   * a players array.
+   */
+
+  let rows = [];
+
+
+  if (
+    Array.isArray(data)
+  ) {
+
+    rows =
+      data;
+
+  }
+
+  else if (
+    Array.isArray(
+      data?.players
+    )
+  ) {
+
+    rows =
+      data.players;
+
+  }
+
+  else if (
+    Array.isArray(
+      data?.values
+    )
+  ) {
+
+    rows =
+      data.values;
+
+  }
+
+
+  rows.forEach(
+    row => {
+
+      const player =
+        row?.player ||
+        row;
+
+
+      const sleeperId =
+        player?.sleeperId ||
+        player?.sleeper_id ||
+        row?.sleeperId ||
+        row?.sleeper_id;
+
+
+      const value =
+        row?.value ??
+        row?.tradeValue ??
+        row?.trade_value ??
+        player?.value ??
+        player?.tradeValue ??
+        player?.trade_value;
+
+
+      if (
+        sleeperId &&
+        Number.isFinite(
+          Number(value)
+        )
+      ) {
+
+        fantasyCalcValues[
+          String(sleeperId)
+        ] =
+          Number(value);
+
+      }
+
+    }
+  );
+
+
+  console.log(
+    "FantasyCalc player map:",
+    Object.keys(
+      fantasyCalcValues
+    ).length
+  );
+
+}
+
+
+/* =========================================================
+   FANTASYCALC STATUS
+========================================================= */
+
+function updateFantasyCalcStatus() {
+
+  const element =
+    document.getElementById(
+      "fantasyCalcStatus"
+    );
+
+
+  if (!element) return;
+
+
+  if (
+    fantasyCalcSource === "live"
+  ) {
+
+    element.innerHTML =
+      "🟢 <strong>FantasyCalc:</strong> Live values";
+
+    element.style.background =
+      "#ecfdf5";
+
+    element.style.color =
+      "#166534";
+
+    return;
+
+  }
+
+
+  if (
+    fantasyCalcSource === "github"
+  ) {
+
+    element.innerHTML =
+      "🟡 <strong>FantasyCalc:</strong> GitHub fallback values";
+
+    element.style.background =
+      "#fffbeb";
+
+    element.style.color =
+      "#92400e";
+
+    return;
+
+  }
+
+
+  element.innerHTML =
+    "🔴 <strong>FantasyCalc:</strong> Values unavailable";
+
+  element.style.background =
+    "#fef2f2";
+
+  element.style.color =
+    "#991b1b";
+
+}
+
+
+/* =========================================================
+   LOAD LEAGUE
 ========================================================= */
 
 async function loadLeague() {
@@ -935,50 +1426,54 @@ async function loadLeague() {
       users,
       rosters,
       players
-    ] = await Promise.all([
+    ] =
+      await Promise.all([
 
-      sleeper(
-        "/league/" +
-        LEAGUE_ID
-      ),
+        sleeper(
+          "/league/" +
+          LEAGUE_ID
+        ),
 
-      sleeper(
-        "/league/" +
-        LEAGUE_ID +
-        "/users"
-      ),
+        sleeper(
+          "/league/" +
+          LEAGUE_ID +
+          "/users"
+        ),
 
-      sleeper(
-        "/league/" +
-        LEAGUE_ID +
-        "/rosters"
-      ),
+        sleeper(
+          "/league/" +
+          LEAGUE_ID +
+          "/rosters"
+        ),
 
-      sleeper(
-        "/players/nfl"
-      )
+        sleeper(
+          "/players/nfl"
+        )
 
-    ]);
+      ]);
 
 
     leagueData =
       league;
 
+
     playersData =
       players;
+
 
     allPlayers =
       Object.values(
         playersData
-      )
-      .filter(
+      ).filter(
         player =>
           player &&
           player.full_name
       );
 
 
-    /* BUILD TEAM DATA */
+    /*
+     * Build team data
+     */
 
     teamsData =
       rosters.map(
@@ -1042,12 +1537,20 @@ async function loadLeague() {
     );
 
 
-    /* CONNECTION */
+    /*
+     * Load FantasyCalc AFTER
+     * teams and league settings
+     * are available.
+     */
+
+    await loadFantasyCalcValues();
+
 
     document.getElementById(
       "connectionStatus"
     ).innerHTML =
       "🟢 Connected to Sleeper";
+
 
     document.getElementById(
       "connectionStatus"
@@ -1064,12 +1567,11 @@ async function loadLeague() {
     loadPowerRankings();
 
 
-    /* URL TEAM SUPPORT */
-
     const params =
       new URLSearchParams(
         window.location.search
       );
+
 
     const urlTeam =
       params.get("team");
@@ -1081,14 +1583,17 @@ async function loadLeague() {
         team =>
           String(
             team.roster.roster_id
-          ) === urlTeam
+          ) ===
+          urlTeam
       )
     ) {
 
       selectedTeamId =
         Number(urlTeam);
 
-    } else {
+    }
+
+    else {
 
       selectedTeamId =
         teamsData[0]
@@ -1108,17 +1613,23 @@ async function loadLeague() {
 
     setupTradeCalculator();
 
+    loadLeagueHistory();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      error
+    );
 
 
     document.getElementById(
       "connectionStatus"
     ).innerHTML =
       "🔴 Couldn't connect to Sleeper.<br><small>" +
-      error.message +
+      escapeHtml(
+        error.message
+      ) +
       "</small>";
 
 
@@ -1143,7 +1654,9 @@ function populateTeamSelectors() {
       "teamSelector"
     );
 
-  selector.innerHTML = "";
+
+  selector.innerHTML =
+    "";
 
 
   teamsData.forEach(
@@ -1154,13 +1667,16 @@ function populateTeamSelectors() {
           "option"
         );
 
+
       option.value =
         team.roster.roster_id;
+
 
       option.textContent =
         team.teamName +
         " — " +
         team.manager;
+
 
       selector.appendChild(
         option
@@ -1170,12 +1686,11 @@ function populateTeamSelectors() {
   );
 
 
-  /* TRADE SELECTORS */
-
   const tradeA =
     document.getElementById(
       "tradeTeamA"
     );
+
 
   const tradeB =
     document.getElementById(
@@ -1185,6 +1700,7 @@ function populateTeamSelectors() {
 
   tradeA.innerHTML =
     '<option value="">Select Team</option>';
+
 
   tradeB.innerHTML =
     '<option value="">Select Team</option>';
@@ -1198,11 +1714,14 @@ function populateTeamSelectors() {
           "option"
         );
 
+
       optionA.value =
         team.roster.roster_id;
 
+
       optionA.textContent =
         team.teamName;
+
 
       tradeA.appendChild(
         optionA
@@ -1214,11 +1733,14 @@ function populateTeamSelectors() {
           "option"
         );
 
+
       optionB.value =
         team.roster.roster_id;
 
+
       optionB.textContent =
         team.teamName;
+
 
       tradeB.appendChild(
         optionB
@@ -1229,6 +1751,10 @@ function populateTeamSelectors() {
 
 }
 
+
+/* =========================================================
+   SELECT TEAM
+========================================================= */
 
 function selectTeam(id) {
 
@@ -1287,18 +1813,19 @@ function renderSelectedTeam() {
       )}
     </h3>
 
-    <div style="color:#64748b; margin-bottom:15px;">
-
+    <div
+      style="
+        color:#64748b;
+        margin-bottom:15px;
+      "
+    >
       Manager:
       ${escapeHtml(
         team.manager
       )}
-
     </div>
 
-
     <div class="stats-grid">
-
 
       <div class="stat-card">
 
@@ -1310,9 +1837,12 @@ function renderSelectedTeam() {
 
           ${team.wins}-
           ${team.losses}
-          ${team.ties
-            ? "-" + team.ties
-            : ""}
+
+          ${
+            team.ties
+              ? "-" + team.ties
+              : ""
+          }
 
         </div>
 
@@ -1326,11 +1856,9 @@ function renderSelectedTeam() {
         </div>
 
         <div class="value">
-
           ${getLeagueRank(
             team.roster.roster_id
           )}
-
         </div>
 
       </div>
@@ -1343,11 +1871,9 @@ function renderSelectedTeam() {
         </div>
 
         <div class="value">
-
           ${formatNumber(
             team.points
           )}
-
         </div>
 
       </div>
@@ -1360,15 +1886,12 @@ function renderSelectedTeam() {
         </div>
 
         <div class="value">
-
           ${formatNumber(
             team.pointsAgainst
           )}
-
         </div>
 
       </div>
-
 
     </div>
 
@@ -1406,7 +1929,6 @@ function getLeagueRank(
 
         }
 
-
         return (
           b.points -
           a.points
@@ -1428,7 +1950,7 @@ function getLeagueRank(
 
 
 /* =========================================================
-   MATCHUP
+   WEEKLY MATCHUP
 ========================================================= */
 
 async function renderMatchup(
@@ -1546,19 +2068,18 @@ async function renderMatchup(
 
     matchupContainer.innerHTML = `
 
-      <div style="
-        text-align:center;
-        margin-bottom:15px;
-        color:#64748b;
-      ">
-
+      <div
+        style="
+          text-align:center;
+          margin-bottom:15px;
+          color:#64748b;
+        "
+      >
         Week ${week}
-
       </div>
 
 
       <div class="matchup">
-
 
         <div class="matchup-team">
 
@@ -1569,9 +2090,7 @@ async function renderMatchup(
           </strong>
 
           <div class="score">
-
             ${teamPoints.toFixed(2)}
-
           </div>
 
         </div>
@@ -1585,30 +2104,23 @@ async function renderMatchup(
         <div class="matchup-team">
 
           <strong>
-
             ${escapeHtml(
               opponent?.teamName ||
               "Opponent"
             )}
-
           </strong>
 
           <div class="score">
-
             ${opponentPoints.toFixed(2)}
-
           </div>
 
         </div>
-
 
       </div>
 
 
       <div class="result">
-
         ${result}
-
       </div>
 
     `;
@@ -1616,7 +2128,10 @@ async function renderMatchup(
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      error
+    );
+
 
     matchupContainer.innerHTML =
       "<div class='empty'>Unable to load matchup.</div>";
@@ -1679,7 +2194,6 @@ function renderRoster(
 
     <div class="roster-columns">
 
-
       <div class="roster-box">
 
         <h3>
@@ -1718,13 +2232,16 @@ function renderRoster(
 
       </div>
 
-
     </div>
 
   `;
 
 }
 
+
+/* =========================================================
+   ROSTER PLAYERS
+========================================================= */
 
 function renderRosterPlayers(
   ids
@@ -1796,23 +2313,29 @@ function renderRosterPlayers(
                 ""
               )}
 
-              ${player.team
-                ? " • " +
-                  escapeHtml(
-                    player.team
-                  )
-                : ""}
-
-              ${getPositionalRank(
-                player
-              ) !== "—"
-                ? " • " +
-                  escapeHtml(
-                    getPositionalRank(
-                      player
+              ${
+                player.team
+                  ? " • " +
+                    escapeHtml(
+                      player.team
                     )
-                  )
-                : ""}
+                  : ""
+              }
+
+              ${
+                getPositionalRank(
+                  player
+                ) !== "—"
+
+                  ? " • " +
+                    escapeHtml(
+                      getPositionalRank(
+                        player
+                      )
+                    )
+
+                  : ""
+              }
 
             </div>
 
@@ -1838,8 +2361,8 @@ function searchPlayers() {
     document.getElementById(
       "playerSearch"
     ).value
-    .trim()
-    .toLowerCase();
+      .trim()
+      .toLowerCase();
 
 
   const results =
@@ -1927,11 +2450,9 @@ function searchPlayers() {
             <div>
 
               <strong>
-
                 ${escapeHtml(
                   name
                 )}
-
               </strong>
 
 
@@ -1942,19 +2463,23 @@ function searchPlayers() {
                   ""
                 )}
 
-                ${player.team
-                  ? " • " +
-                    escapeHtml(
-                      player.team
-                    )
-                  : ""}
+                ${
+                  player.team
+                    ? " • " +
+                      escapeHtml(
+                        player.team
+                      )
+                    : ""
+                }
 
-                ${positionalRank !== "—"
-                  ? " • " +
-                    escapeHtml(
-                      positionalRank
-                    )
-                  : ""}
+                ${
+                  positionalRank !== "—"
+                    ? " • " +
+                      escapeHtml(
+                        positionalRank
+                      )
+                    : ""
+                }
 
               </div>
 
@@ -1994,48 +2519,28 @@ function getPositionalRank(
 
   const positionPlayers =
     allPlayers
-
       .filter(
-        p => {
-
-          return (
-
-            p &&
-
-            p.position ===
+        p =>
+          p &&
+          p.position ===
             position &&
-
-            Number.isFinite(
-              Number(
-                p.search_rank
-              )
-            ) &&
-
+          Number.isFinite(
             Number(
               p.search_rank
-            ) > 0
-
-          );
-
-        }
-      )
-
-      .sort(
-        (a,b) => {
-
-          return (
-
-            Number(
-              a.search_rank
-            ) -
-
-            Number(
-              b.search_rank
             )
-
-          );
-
-        }
+          ) &&
+          Number(
+            p.search_rank
+          ) > 0
+      )
+      .sort(
+        (a,b) =>
+          Number(
+            a.search_rank
+          ) -
+          Number(
+            b.search_rank
+          )
       );
 
 
@@ -2117,6 +2622,12 @@ function showPlayerInfo(
       : "";
 
 
+  const tradeValue =
+    calculateTradeValue(
+      player
+    );
+
+
   container.innerHTML = `
 
     <div
@@ -2129,23 +2640,19 @@ function showPlayerInfo(
     >
 
       <h3>
-
         ${escapeHtml(
           name
         )}
-
       </h3>
 
 
       <div class="player-info">
-
 
         ${infoItem(
           "Position",
           player.position ||
           "—"
         )}
-
 
         ${infoItem(
           "Positional Rank",
@@ -2154,13 +2661,11 @@ function showPlayerInfo(
           )
         )}
 
-
         ${infoItem(
           "Fantasy Position",
           fantasyPositions ||
           "—"
         )}
-
 
         ${infoItem(
           "NFL Team",
@@ -2168,13 +2673,11 @@ function showPlayerInfo(
           "Free Agent"
         )}
 
-
         ${infoItem(
           "Age",
           player.age ??
           "—"
         )}
-
 
         ${infoItem(
           "Jersey",
@@ -2182,13 +2685,11 @@ function showPlayerInfo(
           "—"
         )}
 
-
         ${infoItem(
           "Height",
           player.height ??
           "—"
         )}
-
 
         ${infoItem(
           "Weight",
@@ -2198,13 +2699,11 @@ function showPlayerInfo(
             : "—"
         )}
 
-
         ${infoItem(
           "College",
           player.college ||
           "—"
         )}
-
 
         ${infoItem(
           "Experience",
@@ -2212,13 +2711,11 @@ function showPlayerInfo(
           "—"
         )}
 
-
         ${infoItem(
           "Status",
           player.status ||
           "—"
         )}
-
 
         ${infoItem(
           "Depth Chart",
@@ -2233,7 +2730,6 @@ function showPlayerInfo(
             : "—"
         )}
 
-
       </div>
 
 
@@ -2247,46 +2743,14 @@ function showPlayerInfo(
       >
 
         <strong>
-          Noke Trade Value:
+          FantasyCalc Trade Value:
         </strong>
 
-        ${calculateTradeValue(
-          player
-        )}
-
-      </div>
-
-
-    </div>
-
-  `;
-
-}
-
-
-function infoItem(
-  label,
-  value
-) {
-
-  return `
-
-    <div class="info-item">
-
-      <div class="info-label">
-
-        ${escapeHtml(
-          label
-        )}
-
-      </div>
-
-
-      <div class="info-value">
-
-        ${escapeHtml(
-          String(value)
-        )}
+        ${
+          tradeValue > 0
+            ? tradeValue.toLocaleString()
+            : "Unavailable"
+        }
 
       </div>
 
@@ -2298,7 +2762,39 @@ function infoItem(
 
 
 /* =========================================================
-   TRADE CALCULATOR
+   INFO ITEM
+========================================================= */
+
+function infoItem(
+  label,
+  value
+) {
+
+  return `
+
+    <div class="info-item">
+
+      <div class="info-label">
+        ${escapeHtml(
+          label
+        )}
+      </div>
+
+      <div class="info-value">
+        ${escapeHtml(
+          String(value)
+        )}
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   TRADE CALCULATOR SETUP
 ========================================================= */
 
 function setupTradeCalculator() {
@@ -2317,9 +2813,7 @@ function setupTradeCalculator() {
     null;
 
 
-  if (
-    tradeTeamAId
-  ) {
+  if (tradeTeamAId) {
 
     document.getElementById(
       "tradeTeamA"
@@ -2329,9 +2823,7 @@ function setupTradeCalculator() {
   }
 
 
-  if (
-    tradeTeamBId
-  ) {
+  if (tradeTeamBId) {
 
     document.getElementById(
       "tradeTeamB"
@@ -2351,6 +2843,10 @@ function setupTradeCalculator() {
 
 }
 
+
+/* =========================================================
+   CHANGE TRADE TEAM
+========================================================= */
 
 function changeTradeTeam(
   side
@@ -2394,8 +2890,9 @@ function changeTradeTeam(
     ).innerHTML =
       "";
 
+  }
 
-  } else {
+  else {
 
     tradeTeamBId =
       id ||
@@ -2435,6 +2932,10 @@ function changeTradeTeam(
 }
 
 
+/* =========================================================
+   UPDATE TRADE TEAM NAMES
+========================================================= */
+
 function updateTradeTeamNames() {
 
   const teamA =
@@ -2469,6 +2970,10 @@ function updateTradeTeamNames() {
 }
 
 
+/* =========================================================
+   GET TRADE TEAM
+========================================================= */
+
 function getTradeTeam(
   side
 ) {
@@ -2487,6 +2992,10 @@ function getTradeTeam(
 
 }
 
+
+/* =========================================================
+   SEARCH TRADE PLAYERS
+========================================================= */
 
 function searchTradePlayers(
   side
@@ -2545,13 +3054,13 @@ function searchTradePlayers(
       team.roster.players ||
       []
     )
-    .map(
-      id =>
-        playersData[id]
-    )
-    .filter(
-      Boolean
-    );
+      .map(
+        id =>
+          playersData[id]
+      )
+      .filter(
+        Boolean
+      );
 
 
   const matches =
@@ -2610,7 +3119,6 @@ function searchTradePlayers(
 
           <div class="trade-player">
 
-
             <div>
 
               <div class="trade-player-name">
@@ -2630,19 +3138,23 @@ function searchTradePlayers(
                   ""
                 )}
 
-                ${player.team
-                  ? " • " +
-                    escapeHtml(
-                      player.team
-                    )
-                  : ""}
+                ${
+                  player.team
+                    ? " • " +
+                      escapeHtml(
+                        player.team
+                      )
+                    : ""
+                }
 
-                ${rank !== "—"
-                  ? " • " +
-                    escapeHtml(
-                      rank
-                    )
-                  : ""}
+                ${
+                  rank !== "—"
+                    ? " • " +
+                      escapeHtml(
+                        rank
+                      )
+                    : ""
+                }
 
               </div>
 
@@ -2653,25 +3165,23 @@ function searchTradePlayers(
 
               <span class="trade-value">
 
-                ${value}
+                ${
+                  value > 0
+                    ? value.toLocaleString()
+                    : "—"
+                }
 
               </span>
 
 
               <button
                 class="add-btn"
-                onclick="addTradePlayer(
-                  '${side}',
-                  '${player.player_id}'
-                )"
+                onclick="addTradePlayer('${side}','${player.player_id}')"
               >
-
                 Add
-
               </button>
 
             </div>
-
 
           </div>
 
@@ -2683,15 +3193,17 @@ function searchTradePlayers(
 }
 
 
+/* =========================================================
+   ADD TRADE PLAYER
+========================================================= */
+
 function addTradePlayer(
   side,
   playerId
 ) {
 
   const player =
-    playersData[
-      playerId
-    ];
+    playersData[playerId];
 
 
   if (!player) return;
@@ -2748,11 +3260,16 @@ function addTradePlayer(
   input.value =
     "";
 
+
   results.innerHTML =
     "";
 
 }
 
+
+/* =========================================================
+   REMOVE TRADE PLAYER
+========================================================= */
 
 function removeTradePlayer(
   side,
@@ -2770,7 +3287,9 @@ function removeTradePlayer(
           playerId
       );
 
-  } else {
+  }
+
+  else {
 
     tradeSideB =
       tradeSideB.filter(
@@ -2792,6 +3311,55 @@ function removeTradePlayer(
 }
 
 
+/* =========================================================
+   FANTASYCALC VALUE
+========================================================= */
+
+function calculateTradeValue(
+  player
+) {
+
+  if (!player) {
+
+    return 0;
+
+  }
+
+
+  const playerId =
+    String(
+      player.player_id
+    );
+
+
+  const value =
+    fantasyCalcValues[
+      playerId
+    ];
+
+
+  if (
+    Number.isFinite(
+      Number(value)
+    )
+  ) {
+
+    return Number(
+      value
+    );
+
+  }
+
+
+  return 0;
+
+}
+
+
+/* =========================================================
+   RENDER TRADE PLAYERS
+========================================================= */
+
 function renderTradePlayers(
   side
 ) {
@@ -2810,6 +3378,14 @@ function renderTradePlayers(
     );
 
 
+  const totalElement =
+    document.getElementById(
+      side === "A"
+        ? "tradeValueA"
+        : "tradeValueB"
+    );
+
+
   if (
     list.length === 0
   ) {
@@ -2818,11 +3394,7 @@ function renderTradePlayers(
       "<div class='empty'>No players added.</div>";
 
 
-    document.getElementById(
-      side === "A"
-        ? "tradeValueA"
-        : "tradeValueB"
-    ).textContent =
+    totalElement.textContent =
       "0";
 
 
@@ -2835,10 +3407,15 @@ function renderTradePlayers(
     list.map(
       player => {
 
+        const value =
+          calculateTradeValue(
+            player
+          );
+
+
         return `
 
           <div class="trade-player">
-
 
             <div>
 
@@ -2859,23 +3436,29 @@ function renderTradePlayers(
                   ""
                 )}
 
-                ${player.team
-                  ? " • " +
-                    escapeHtml(
-                      player.team
-                    )
-                  : ""}
-
-                ${getPositionalRank(
-                  player
-                ) !== "—"
-                  ? " • " +
-                    escapeHtml(
-                      getPositionalRank(
-                        player
+                ${
+                  player.team
+                    ? " • " +
+                      escapeHtml(
+                        player.team
                       )
-                    )
-                  : ""}
+                    : ""
+                }
+
+                ${
+                  getPositionalRank(
+                    player
+                  ) !== "—"
+
+                    ? " • " +
+                      escapeHtml(
+                        getPositionalRank(
+                          player
+                        )
+                      )
+
+                    : ""
+                }
 
               </div>
 
@@ -2886,27 +3469,23 @@ function renderTradePlayers(
 
               <span class="trade-value">
 
-                ${calculateTradeValue(
-                  player
-                )}
+                ${
+                  value > 0
+                    ? value.toLocaleString()
+                    : "—"
+                }
 
               </span>
 
 
               <button
                 class="remove-btn"
-                onclick="removeTradePlayer(
-                  '${side}',
-                  '${player.player_id}'
-                )"
+                onclick="removeTradePlayer('${side}','${player.player_id}')"
               >
-
                 Remove
-
               </button>
 
             </div>
-
 
           </div>
 
@@ -2918,7 +3497,10 @@ function renderTradePlayers(
 
   const total =
     list.reduce(
-      (sum, player) =>
+      (
+        sum,
+        player
+      ) =>
         sum +
         calculateTradeValue(
           player
@@ -2927,267 +3509,41 @@ function renderTradePlayers(
     );
 
 
-  document.getElementById(
-    side === "A"
-      ? "tradeValueA"
-      : "tradeValueB"
-  ).textContent =
-    total;
+  totalElement.textContent =
+    total.toLocaleString();
 
 }
 
 
 /* =========================================================
-   TRADE VALUE
+   REFRESH TRADE CALCULATOR
 ========================================================= */
 
-function calculateTradeValue(
-  player
-) {
+function refreshTradeCalculator() {
 
-  if (!player) return 0;
+  if (
+    tradeSideA.length > 0
+  ) {
 
-
-  let rank =
-    Number(
-      player.search_rank
+    renderTradePlayers(
+      "A"
     );
 
-
-  let value;
-
-
-  if (
-    Number.isFinite(rank) &&
-    rank > 0
-  ) {
-
-    value =
-      100 /
-      Math.pow(
-        Math.max(
-          rank,
-          1
-        ),
-        0.28
-      );
-
-
-    value *=
-      2.25;
-
-  } else {
-
-    value =
-      30;
-
   }
 
 
-  /* POSITION */
+  if (
+    tradeSideB.length > 0
+  ) {
 
-  const position =
-    player.position;
-
-
-  const positionMultiplier = {
-
-    QB: 1.00,
-
-    RB: 1.08,
-
-    WR: 1.08,
-
-    TE: 1.02,
-
-    K: 0.35,
-
-    DEF: 0.35
-
-  };
-
-
-  value *=
-    positionMultiplier[
-      position
-    ] ||
-    0.85;
-
-
-  /* AGE */
-
-  const age =
-    Number(
-      player.age
+    renderTradePlayers(
+      "B"
     );
 
-
-  if (
-    Number.isFinite(age)
-  ) {
-
-    if (
-      age <= 22
-    ) {
-
-      value *=
-        1.15;
-
-    } else if (
-      age <= 24
-    ) {
-
-      value *=
-        1.10;
-
-    } else if (
-      age <= 26
-    ) {
-
-      value *=
-        1.05;
-
-    } else if (
-      age <= 28
-    ) {
-
-      value *=
-        1.00;
-
-    } else if (
-      age <= 30
-    ) {
-
-      value *=
-        0.92;
-
-    } else if (
-      age <= 32
-    ) {
-
-      value *=
-        0.84;
-
-    } else {
-
-      value *=
-        0.72;
-
-    }
-
   }
 
 
-  /* DEPTH CHART */
-
-  const depth =
-    Number(
-      player.depth_chart_order
-    );
-
-
-  if (
-    Number.isFinite(depth)
-  ) {
-
-    if (
-      depth === 1
-    ) {
-
-      value *=
-        1.10;
-
-    } else if (
-      depth === 2
-    ) {
-
-      value *=
-        1.03;
-
-    } else if (
-      depth === 3
-    ) {
-
-      value *=
-        0.95;
-
-    } else if (
-      depth >= 4
-    ) {
-
-      value *=
-        0.88;
-
-    }
-
-  }
-
-
-  /* STATUS */
-
-  const status =
-    String(
-      player.status ||
-      ""
-    ).toLowerCase();
-
-
-  const injury =
-    String(
-      player.injury_status ||
-      ""
-    ).toLowerCase();
-
-
-  if (
-    status === "inactive" ||
-    status === "injured" ||
-    injury === "out"
-  ) {
-
-    value *=
-      0.75;
-
-  }
-
-
-  if (
-    injury === "ir"
-  ) {
-
-    value *=
-      0.65;
-
-  }
-
-
-  /* FREE AGENT */
-
-  if (
-    !player.team &&
-    position !== "DEF" &&
-    position !== "K"
-  ) {
-
-    value *=
-      0.80;
-
-  }
-
-
-  value =
-    Math.max(
-      1,
-      Math.min(
-        100,
-        value
-      )
-    );
-
-
-  return Math.round(
-    value
-  );
+  updateTradeSummary();
 
 }
 
@@ -3200,7 +3556,10 @@ function updateTradeSummary() {
 
   const valueA =
     tradeSideA.reduce(
-      (sum, player) =>
+      (
+        sum,
+        player
+      ) =>
         sum +
         calculateTradeValue(
           player
@@ -3211,7 +3570,10 @@ function updateTradeSummary() {
 
   const valueB =
     tradeSideB.reduce(
-      (sum, player) =>
+      (
+        sum,
+        player
+      ) =>
         sum +
         calculateTradeValue(
           player
@@ -3252,6 +3614,18 @@ function updateTradeSummary() {
   }
 
 
+  if (
+    !fantasyCalcLoaded
+  ) {
+
+    summary.innerHTML =
+      "FantasyCalc values are currently unavailable.";
+
+    return;
+
+  }
+
+
   const difference =
     Math.abs(
       valueA -
@@ -3268,20 +3642,24 @@ function updateTradeSummary() {
   ) {
 
     text =
-      "Team A side has the higher estimated player value.";
+      "Team A side has the higher FantasyCalc market value.";
 
-  } else if (
+  }
+
+  else if (
     valueB >
     valueA
   ) {
 
     text =
-      "Team B side has the higher estimated player value.";
+      "Team B side has the higher FantasyCalc market value.";
 
-  } else {
+  }
+
+  else {
 
     text =
-      "Both sides have the same estimated player value.";
+      "Both sides have the same FantasyCalc market value.";
 
   }
 
@@ -3289,22 +3667,22 @@ function updateTradeSummary() {
   summary.innerHTML = `
 
     <div>
-
       <strong>
         Estimated Value Difference
       </strong>
-
     </div>
-
 
     <div class="trade-difference">
 
-      ${difference}
+      ${difference.toLocaleString()}
 
     </div>
 
-
-    <div style="margin-top:6px;">
+    <div
+      style="
+        margin-top:6px;
+      "
+    >
 
       ${text}
 
@@ -3316,7 +3694,7 @@ function updateTradeSummary() {
 
 
 /* =========================================================
-   LEAGUE INFO
+   LEAGUE INFORMATION
 ========================================================= */
 
 function loadLeagueInfo() {
@@ -3327,13 +3705,11 @@ function loadLeagueInfo() {
 
     <div class="player-info">
 
-
       ${infoItem(
         "League Name",
         leagueData?.name ||
         "—"
       )}
-
 
       ${infoItem(
         "Season",
@@ -3341,12 +3717,10 @@ function loadLeagueInfo() {
         "—"
       )}
 
-
       ${infoItem(
         "Teams",
         teamsData.length
       )}
-
 
       ${infoItem(
         "Scoring",
@@ -3354,7 +3728,6 @@ function loadLeagueInfo() {
           ? "Custom"
           : "Unknown"
       )}
-
 
     </div>
 
@@ -3371,7 +3744,11 @@ function loadPowerRankings() {
 
   if (
     teamsData.length === 0
-  ) return;
+  ) {
+
+    return;
+
+  }
 
 
   const maxPoints =
@@ -3388,7 +3765,6 @@ function loadPowerRankings() {
 
   const rankings =
     teamsData
-
       .map(
         team => {
 
@@ -3400,6 +3776,7 @@ function loadPowerRankings() {
 
           const winPct =
             games > 0
+
               ? (
                   (
                     team.wins +
@@ -3408,25 +3785,24 @@ function loadPowerRankings() {
                   ) /
                   games
                 )
+
               : 0;
 
 
           const pointsRelative =
             maxPoints > 0
+
               ? team.points /
                 maxPoints
+
               : 0;
 
 
           const powerScore =
-            (
-              winPct *
-              0.60
-            ) +
-            (
-              pointsRelative *
-              0.40
-            );
+            winPct *
+            0.60 +
+            pointsRelative *
+            0.40;
 
 
           return {
@@ -3439,7 +3815,6 @@ function loadPowerRankings() {
 
         }
       )
-
       .sort(
         (a,b) =>
           b.powerScore -
@@ -3452,7 +3827,6 @@ function loadPowerRankings() {
   ).innerHTML = `
 
     <table class="rankings-table">
-
 
       <thead>
 
@@ -3486,7 +3860,10 @@ function loadPowerRankings() {
       <tbody>
 
         ${rankings.map(
-          (team,index) => `
+          (
+            team,
+            index
+          ) => `
 
             <tr>
 
@@ -3496,44 +3873,34 @@ function loadPowerRankings() {
                 </strong>
               </td>
 
-
               <td>
-
                 ${escapeHtml(
                   team.teamName
                 )}
-
               </td>
-
 
               <td>
 
                 ${team.wins}-
                 ${team.losses}
-                ${team.ties
-                  ? "-" +
-                    team.ties
-                  : ""}
+
+                ${
+                  team.ties
+                    ? "-" +
+                      team.ties
+                    : ""
+                }
 
               </td>
 
-
               <td>
-
                 ${formatNumber(
                   team.points
                 )}
-
               </td>
 
-
               <td>
-
-                ${(
-                  team.powerScore *
-                  100
-                ).toFixed(1)}
-
+                ${(team.powerScore * 100).toFixed(1)}
               </td>
 
             </tr>
@@ -3541,7 +3908,6 @@ function loadPowerRankings() {
         `).join("")}
 
       </tbody>
-
 
     </table>
 
@@ -3557,30 +3923,28 @@ function loadPowerRankings() {
 function loadStandings() {
 
   const standings =
-    [...teamsData]
-      .sort(
-        (a,b) => {
+    [...teamsData].sort(
+      (a,b) => {
 
-          if (
-            b.wins !==
-            a.wins
-          ) {
-
-            return (
-              b.wins -
-              a.wins
-            );
-
-          }
-
+        if (
+          b.wins !==
+          a.wins
+        ) {
 
           return (
-            b.points -
-            a.points
+            b.wins -
+            a.wins
           );
 
         }
-      );
+
+        return (
+          b.points -
+          a.points
+        );
+
+      }
+    );
 
 
   document.getElementById(
@@ -3588,7 +3952,6 @@ function loadStandings() {
   ).innerHTML = `
 
     <table class="rankings-table">
-
 
       <thead>
 
@@ -3626,64 +3989,55 @@ function loadStandings() {
       <tbody>
 
         ${standings.map(
-          (team,index) => `
+          (
+            team,
+            index
+          ) => `
 
             <tr>
 
               <td>
-
                 <strong>
                   ${index + 1}
                 </strong>
-
               </td>
 
-
               <td>
-
                 ${escapeHtml(
                   team.teamName
                 )}
-
               </td>
 
-
               <td>
-
                 ${escapeHtml(
                   team.manager
                 )}
-
               </td>
-
 
               <td>
 
                 ${team.wins}-
                 ${team.losses}
-                ${team.ties
-                  ? "-" +
-                    team.ties
-                  : ""}
+
+                ${
+                  team.ties
+                    ? "-" +
+                      team.ties
+                    : ""
+                }
 
               </td>
 
-
               <td>
-
                 ${formatNumber(
                   team.points
                 )}
-
               </td>
 
-
               <td>
-
                 ${formatNumber(
                   team.pointsAgainst
                 )}
-
               </td>
 
             </tr>
@@ -3691,7 +4045,6 @@ function loadStandings() {
         `).join("")}
 
       </tbody>
-
 
     </table>
 
@@ -3701,7 +4054,7 @@ function loadStandings() {
 
 
 /* =========================================================
-   PAST CHAMPIONS / LEAGUE HISTORY
+   LEAGUE HISTORY
 ========================================================= */
 
 async function loadLeagueHistory() {
@@ -3710,6 +4063,7 @@ async function loadLeagueHistory() {
     document.getElementById(
       "leagueHistory"
     );
+
 
   const championsContainer =
     document.getElementById(
@@ -3730,11 +4084,6 @@ async function loadLeagueHistory() {
     const visited =
       new Set();
 
-
-    /*
-     * Follow Sleeper's previous_league_id
-     * backward through each season.
-     */
 
     while (
       leagueId &&
@@ -3759,32 +4108,29 @@ async function loadLeagueHistory() {
         users,
         rosters,
         bracket
-      ] = await Promise.all([
+      ] =
+        await Promise.all([
 
-        sleeper(
-          "/league/" +
-          leagueId +
-          "/users"
-        ),
+          sleeper(
+            "/league/" +
+            leagueId +
+            "/users"
+          ),
 
-        sleeper(
-          "/league/" +
-          leagueId +
-          "/rosters"
-        ),
+          sleeper(
+            "/league/" +
+            leagueId +
+            "/rosters"
+          ),
 
-        sleeper(
-          "/league/" +
-          leagueId +
-          "/winners_bracket"
-        )
+          sleeper(
+            "/league/" +
+            leagueId +
+            "/winners_bracket"
+          )
 
-      ]);
+        ]);
 
-
-      /*
-       * Build user/team name map.
-       */
 
       const userMap =
         {};
@@ -3805,10 +4151,6 @@ async function loadLeagueHistory() {
       );
 
 
-      /*
-       * Build roster map.
-       */
-
       const rosterMap =
         {};
 
@@ -3824,11 +4166,6 @@ async function loadLeagueHistory() {
         }
       );
 
-
-      /*
-       * Find the championship
-       * matchup in the winners bracket.
-       */
 
       let championship =
         null;
@@ -3860,7 +4197,8 @@ async function loadLeagueHistory() {
                 game =>
                   Number(
                     game.r
-                  ) || 0
+                  ) ||
+                  0
               )
             );
 
@@ -3878,7 +4216,8 @@ async function loadLeagueHistory() {
           championship =
             finalGames[
               finalGames.length - 1
-            ] || null;
+            ] ||
+            null;
 
         }
 
@@ -3915,28 +4254,38 @@ async function loadLeagueHistory() {
 
           name:
             championRoster
+
               ? (
                   userMap[
                     championRoster.owner_id
                   ] ||
                   "Unknown Team"
                 )
+
               : "Unknown Team",
 
           wins:
-            championRoster?.settings?.wins ??
+            championRoster
+              ?.settings
+              ?.wins ??
             0,
 
           losses:
-            championRoster?.settings?.losses ??
+            championRoster
+              ?.settings
+              ?.losses ??
             0,
 
           ties:
-            championRoster?.settings?.ties ??
+            championRoster
+              ?.settings
+              ?.ties ??
             0,
 
           points:
-            championRoster?.settings?.fpts ??
+            championRoster
+              ?.settings
+              ?.fpts ??
             0
 
         };
@@ -3949,26 +4298,20 @@ async function loadLeagueHistory() {
 
           name:
             runnerUpRoster
+
               ? (
                   userMap[
                     runnerUpRoster.owner_id
                   ] ||
                   "Unknown Team"
                 )
+
               : "Unknown Team"
 
         };
 
       }
 
-
-      /*
-       * Find the regular-season champion.
-       *
-       * Primary sorting:
-       * 1. Wins
-       * 2. Points For
-       */
 
       const sortedRosters =
         [...rosters].sort(
@@ -3979,6 +4322,7 @@ async function loadLeagueHistory() {
                 a.settings?.wins ||
                 0
               );
+
 
             const bWins =
               Number(
@@ -4005,6 +4349,7 @@ async function loadLeagueHistory() {
                 a.settings?.fpts ||
                 0
               );
+
 
             const bPoints =
               Number(
@@ -4044,25 +4389,33 @@ async function loadLeagueHistory() {
 
           wins:
             Number(
-              regularSeasonChampion.settings?.wins ||
+              regularSeasonChampion
+                .settings
+                ?.wins ||
               0
             ),
 
           losses:
             Number(
-              regularSeasonChampion.settings?.losses ||
+              regularSeasonChampion
+                .settings
+                ?.losses ||
               0
             ),
 
           ties:
             Number(
-              regularSeasonChampion.settings?.ties ||
+              regularSeasonChampion
+                .settings
+                ?.ties ||
               0
             ),
 
           points:
             Number(
-              regularSeasonChampion.settings?.fpts ||
+              regularSeasonChampion
+                .settings
+                ?.fpts ||
               0
             )
 
@@ -4096,10 +4449,6 @@ async function loadLeagueHistory() {
 
       });
 
-
-      /*
-       * Move to the previous season.
-       */
 
       leagueId =
         league.previous_league_id ||
@@ -4186,9 +4535,7 @@ function renderLeagueHistory(
     container.innerHTML = `
 
       <div class="history-empty">
-
         No league history found.
-
       </div>
 
     `;
@@ -4218,6 +4565,7 @@ function renderLeagueHistory(
 
         const championRecord =
           record.champion
+
             ? (
                 record.champion.wins +
                 "-" +
@@ -4229,14 +4577,17 @@ function renderLeagueHistory(
                     : ""
                 )
               )
+
             : "—";
 
 
         const championPoints =
           record.champion
+
             ? formatNumber(
                 record.champion.points
               )
+
             : "—";
 
 
@@ -4246,6 +4597,7 @@ function renderLeagueHistory(
 
         const regularSeasonRecord =
           regularSeason
+
             ? (
                 regularSeason.wins +
                 "-" +
@@ -4257,18 +4609,20 @@ function renderLeagueHistory(
                     : ""
                 )
               )
+
             : "—";
 
 
         return `
 
           <div
-            class="history-card
+            class="
+              history-card
               ${record.latest
                 ? "current"
-                : "completed"}"
+                : "completed"}
+            "
           >
-
 
             <div class="history-season">
 
@@ -4282,15 +4636,21 @@ function renderLeagueHistory(
             <div>
 
               <span
-                class="history-status
-                  ${hasChampion
-                    ? "completed-status"
-                    : ""}"
+                class="
+                  history-status
+                  ${
+                    hasChampion
+                      ? "completed-status"
+                      : ""
+                  }
+                "
               >
 
-                ${hasChampion
-                  ? "🏁 Season Complete"
-                  : "🏈 Current Season"}
+                ${
+                  hasChampion
+                    ? "🏁 Season Complete"
+                    : "🏈 Current Season"
+                }
 
               </span>
 
@@ -4312,9 +4672,11 @@ function renderLeagueHistory(
               🥈 Runner-up:
 
               <strong>
+
                 ${escapeHtml(
                   runnerUpName
                 )}
+
               </strong>
 
             </div>
@@ -4326,9 +4688,7 @@ function renderLeagueHistory(
               <div class="history-stat">
 
                 <div class="history-stat-label">
-
                   Regular Season Champion
-
                 </div>
 
                 <div class="history-stat-value">
@@ -4346,9 +4706,7 @@ function renderLeagueHistory(
               <div class="history-stat">
 
                 <div class="history-stat-label">
-
                   Regular Season Record
-
                 </div>
 
                 <div class="history-stat-value">
@@ -4363,9 +4721,7 @@ function renderLeagueHistory(
               <div class="history-stat">
 
                 <div class="history-stat-label">
-
                   Champion's Record
-
                 </div>
 
                 <div class="history-stat-value">
@@ -4380,9 +4736,7 @@ function renderLeagueHistory(
               <div class="history-stat">
 
                 <div class="history-stat-label">
-
                   Champion's Points
-
                 </div>
 
                 <div class="history-stat-value">
@@ -4397,9 +4751,7 @@ function renderLeagueHistory(
               <div class="history-stat">
 
                 <div class="history-stat-label">
-
                   League Size
-
                 </div>
 
                 <div class="history-stat-value">
@@ -4414,7 +4766,6 @@ function renderLeagueHistory(
 
             </div>
 
-
           </div>
 
         `;
@@ -4426,7 +4777,7 @@ function renderLeagueHistory(
 
 
 /* =========================================================
-   RENDER PAST CHAMPIONS
+   PAST CHAMPIONS
 ========================================================= */
 
 function renderPastChampions(
@@ -4438,11 +4789,6 @@ function renderPastChampions(
       "pastChampions"
     );
 
-
-  /*
-   * Only display seasons that
-   * actually have a champion.
-   */
 
   const completed =
     history.filter(
@@ -4472,107 +4818,103 @@ function renderPastChampions(
 
   container.innerHTML =
     completed.map(
-      record => {
+      record => `
 
-        return `
+        <div
+          class="history-card completed"
+        >
 
-          <div
-            class="history-card completed"
-          >
+          <div class="history-season">
 
-            <div class="history-season">
-
-              ${escapeHtml(
-                record.season
-              )}
-
-            </div>
-
-
-            <div class="history-champion">
-
-              🏆
-              ${escapeHtml(
-                record.champion.name
-              )}
-
-            </div>
-
-
-            <div class="history-runner">
-
-              🥈 Runner-up:
-
-              <strong>
-
-                ${escapeHtml(
-                  record.runnerUp?.name ||
-                  "—"
-                )}
-
-              </strong>
-
-            </div>
-
-
-            <div class="history-row">
-
-
-              <div class="history-stat">
-
-                <div class="history-stat-label">
-
-                  Champion's Record
-
-                </div>
-
-                <div class="history-stat-value">
-
-                  ${record.champion.wins}-
-                  ${record.champion.losses}
-                  ${record.champion.ties
-                    ? "-" +
-                      record.champion.ties
-                    : ""}
-
-                </div>
-
-              </div>
-
-
-              <div class="history-stat">
-
-                <div class="history-stat-label">
-
-                  Champion's Points
-
-                </div>
-
-                <div class="history-stat-value">
-
-                  ${formatNumber(
-                    record.champion.points
-                  )}
-
-                </div>
-
-              </div>
-
-
-            </div>
+            ${escapeHtml(
+              record.season
+            )}
 
           </div>
 
-        `;
 
-      }
+          <div class="history-champion">
+
+            🏆
+
+            ${escapeHtml(
+              record.champion.name
+            )}
+
+          </div>
+
+
+          <div class="history-runner">
+
+            🥈 Runner-up:
+
+            <strong>
+
+              ${escapeHtml(
+                record.runnerUp?.name ||
+                "—"
+              )}
+
+            </strong>
+
+          </div>
+
+
+          <div class="history-row">
+
+
+            <div class="history-stat">
+
+              <div class="history-stat-label">
+                Champion's Record
+              </div>
+
+              <div class="history-stat-value">
+
+                ${record.champion.wins}-
+                ${record.champion.losses}
+
+                ${
+                  record.champion.ties
+                    ? "-" +
+                      record.champion.ties
+                    : ""
+                }
+
+              </div>
+
+            </div>
+
+
+            <div class="history-stat">
+
+              <div class="history-stat-label">
+                Champion's Points
+              </div>
+
+              <div class="history-stat-value">
+
+                ${formatNumber(
+                  record.champion.points
+                )}
+
+              </div>
+
+            </div>
+
+
+          </div>
+
+        </div>
+
+      `
     ).join("");
 
 }
 
 
 /* =========================================================
-   HELPERS
+   FORMAT NUMBER
 ========================================================= */
 
 function formatNumber(
@@ -4580,12 +4922,15 @@ function formatNumber(
 ) {
 
   return Number(
-    number ||
-    0
+    number || 0
   ).toFixed(2);
 
 }
 
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
 
 function escapeHtml(
   value
@@ -4594,22 +4939,27 @@ function escapeHtml(
   return String(
     value ?? ""
   )
+
     .replace(
       /&/g,
       "&amp;"
     )
+
     .replace(
       /</g,
       "&lt;"
     )
+
     .replace(
       />/g,
       "&gt;"
     )
+
     .replace(
       /"/g,
       "&quot;"
     )
+
     .replace(
       /'/g,
       "&#039;"
@@ -4623,9 +4973,6 @@ function escapeHtml(
 ========================================================= */
 
 loadLeague();
-
-loadLeagueHistory();
-
 
 </script>
 
