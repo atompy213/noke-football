@@ -1,0 +1,44 @@
+name: Update FantasyCalc Values
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-fantasycalc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download FantasyCalc values
+        run: |
+          curl -L \
+            "https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=1&numTeams=10&ppr=0.5" \
+            -o fantasycalc-values.json
+
+      - name: Check downloaded file
+        run: |
+          if [ ! -s fantasycalc-values.json ]; then
+            echo "FantasyCalc download failed."
+            exit 1
+          fi
+
+          echo "FantasyCalc values downloaded successfully."
+
+      - name: Commit updated values
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add fantasycalc-values.json
+
+          git diff --cached --quiet || \
+            git commit -m "Update FantasyCalc trade values"
+
+          git push
