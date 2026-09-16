@@ -221,6 +221,69 @@ section h2 {
 
 
 /* =========================
+   ROSTER
+   ========================= */
+
+.roster-section {
+    margin-bottom: 25px;
+}
+
+.roster-category {
+    border-bottom: 1px solid #292c32;
+}
+
+.roster-category:last-child {
+    border-bottom: none;
+}
+
+.roster-category-title {
+    padding: 15px 20px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #aaa;
+    background: #15171c;
+}
+
+.player-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 100px 100px;
+    align-items: center;
+    padding: 13px 20px;
+    border-top: 1px solid #25282e;
+}
+
+.player-row:hover {
+    background: #1d2026;
+}
+
+.player-position {
+    color: #888;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.player-name {
+    font-weight: bold;
+}
+
+.player-team {
+    color: #999;
+    font-size: 13px;
+}
+
+.player-points {
+    text-align: right;
+    font-weight: bold;
+}
+
+.empty-roster {
+    padding: 20px;
+    color: #777;
+    text-align: center;
+}
+
+
+/* =========================
    TABLES
    ========================= */
 
@@ -308,15 +371,6 @@ tr:last-child td {
 
 
 /* =========================
-   SELECTED TEAM
-   ========================= */
-
-.selected-team {
-    border: 1px solid #4d8cff;
-}
-
-
-/* =========================
    MOBILE
    ========================= */
 
@@ -362,6 +416,19 @@ tr:last-child td {
 
     .matchup-score {
         font-size: 30px;
+    }
+
+    .player-row {
+        grid-template-columns: 45px 1fr 65px;
+        padding: 12px 10px;
+    }
+
+    .player-team {
+        display: none;
+    }
+
+    .player-points {
+        font-size: 13px;
     }
 
     th,
@@ -602,6 +669,84 @@ tr:last-child td {
 ```
 
 </div>
+
+<!-- =========================
+     ROSTER
+     ========================= -->
+
+<section class="roster-section">
+
+```
+<h2>
+    👥 Roster
+</h2>
+
+<div
+    class="description"
+    id="rosterDescription"
+>
+    Loading roster...
+</div>
+
+
+<!-- STARTERS -->
+
+<div class="roster-category">
+
+    <div class="roster-category-title">
+        ⭐ Starters
+    </div>
+
+    <div id="starters">
+
+        <div class="empty-roster">
+            Loading...
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- BENCH -->
+
+<div class="roster-category">
+
+    <div class="roster-category-title">
+        🪑 Bench
+    </div>
+
+    <div id="bench">
+
+        <div class="empty-roster">
+            Loading...
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- IR -->
+
+<div class="roster-category">
+
+    <div class="roster-category-title">
+        🏥 IR
+    </div>
+
+    <div id="ir">
+
+        <div class="empty-roster">
+            Loading...
+        </div>
+
+    </div>
+
+</div>
+```
+
+</section>
 
 <!-- =========================
      LEAGUE INFORMATION
@@ -860,7 +1005,7 @@ let leagueData = null;
 
 let teamsData = [];
 
-let matchupData = [];
+let playersData = {};
 
 
 
@@ -880,14 +1025,15 @@ async function loadLeague() {
 
 
         /*
-         * Get league information,
-         * users, and rosters.
+         * Get league, users, rosters,
+         * and player database.
          */
 
         const [
             league,
             users,
-            rosters
+            rosters,
+            players
         ] = await Promise.all([
 
             sleeper(
@@ -905,6 +1051,10 @@ async function loadLeague() {
                 "/league/" +
                 LEAGUE_ID +
                 "/rosters"
+            ),
+
+            sleeper(
+                "/players/nfl"
             )
 
         ]);
@@ -912,6 +1062,10 @@ async function loadLeague() {
 
         leagueData =
             league;
+
+
+        playersData =
+            players;
 
 
 
@@ -1121,11 +1275,6 @@ async function loadLeague() {
 
         if (!selectedTeam) {
 
-            /*
-             * If no team is specified,
-             * default to the first team.
-             */
-
             selectedTeam =
                 teamsData[0];
 
@@ -1318,11 +1467,12 @@ function populateTeamSelector() {
    SELECT TEAM
    ========================= */
 
-async function selectTeam(team) {
+async function selectTeam(
+    team
+) {
 
     /*
-     * Update URL so dashboards
-     * can be shared directly.
+     * Update URL.
      */
 
     const newUrl =
@@ -1339,7 +1489,7 @@ async function selectTeam(team) {
 
 
     /* =========================
-       TEAM INFORMATION
+       TEAM DASHBOARD
        ========================= */
 
     document.getElementById(
@@ -1367,11 +1517,6 @@ async function selectTeam(team) {
                 : ""
         );
 
-
-
-    /* =========================
-       LEAGUE RANK
-       ========================= */
 
     const sortedTeams =
         [...teamsData].sort(
@@ -1414,11 +1559,6 @@ async function selectTeam(team) {
         rank;
 
 
-
-    /* =========================
-       POINTS
-       ========================= */
-
     document.getElementById(
         "myPointsFor"
     ).textContent =
@@ -1438,6 +1578,308 @@ async function selectTeam(team) {
 
     await loadMatchup(
         team
+    );
+
+
+
+    /* =========================
+       ROSTER
+       ========================= */
+
+    loadRoster(
+        team
+    );
+
+}
+
+
+
+/* =========================
+   LOAD ROSTER
+   ========================= */
+
+function loadRoster(
+    team
+) {
+
+    const roster =
+        team.roster;
+
+
+    document.getElementById(
+        "rosterDescription"
+    ).textContent =
+        team.teamName +
+        " • " +
+        (
+            roster.players?.length ||
+            0
+        ) +
+        " players";
+
+
+
+    const starters =
+        roster.starters ||
+        [];
+
+
+    const players =
+        roster.players ||
+        [];
+
+
+    const reserve =
+        roster.reserve ||
+        [];
+
+
+    /*
+     * Starters
+     */
+
+    const starterPlayers =
+        starters.map(
+            playerId =>
+                createPlayerObject(
+                    playerId,
+                    "Starter"
+                )
+        );
+
+
+    /*
+     * Players on IR.
+     */
+
+    const irPlayers =
+        reserve.map(
+            playerId =>
+                createPlayerObject(
+                    playerId,
+                    "IR"
+                )
+        );
+
+
+    /*
+     * Bench = roster players
+     * that aren't starters or IR.
+     */
+
+    const starterSet =
+        new Set(starters);
+
+
+    const reserveSet =
+        new Set(reserve);
+
+
+    const benchPlayers =
+        players
+
+            .filter(
+                playerId =>
+                    !starterSet.has(
+                        playerId
+                    ) &&
+                    !reserveSet.has(
+                        playerId
+                    )
+            )
+
+            .map(
+                playerId =>
+                    createPlayerObject(
+                        playerId,
+                        "Bench"
+                    )
+            );
+
+
+
+    renderRosterCategory(
+        "starters",
+        starterPlayers
+    );
+
+
+    renderRosterCategory(
+        "bench",
+        benchPlayers
+    );
+
+
+    renderRosterCategory(
+        "ir",
+        irPlayers
+    );
+
+}
+
+
+
+/* =========================
+   PLAYER OBJECT
+   ========================= */
+
+function createPlayerObject(
+    playerId,
+    type
+) {
+
+    const player =
+        playersData[playerId];
+
+
+    if (!player) {
+
+        return {
+
+            id: playerId,
+            name: "Unknown Player",
+            position: "—",
+            team: "—",
+            type
+
+        };
+
+    }
+
+
+    const firstName =
+        player.first_name ||
+        "";
+
+
+    const lastName =
+        player.last_name ||
+        "";
+
+
+    const name =
+        (
+            firstName +
+            " " +
+            lastName
+        ).trim() ||
+        player.full_name ||
+        "Unknown Player";
+
+
+    return {
+
+        id: playerId,
+
+        name,
+
+        position:
+            player.position ||
+            "—",
+
+        team:
+            player.team ||
+            "FA",
+
+        type
+
+    };
+
+}
+
+
+
+/* =========================
+   RENDER ROSTER
+   ========================= */
+
+function renderRosterCategory(
+    elementId,
+    players
+) {
+
+    const container =
+        document.getElementById(
+            elementId
+        );
+
+
+    container.innerHTML = "";
+
+
+    if (!players.length) {
+
+        container.innerHTML =
+
+            `<div class="empty-roster">
+                No players
+            </div>`;
+
+        return;
+
+    }
+
+
+    players.forEach(
+        player => {
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+
+            row.className =
+                "player-row";
+
+
+            row.innerHTML = `
+
+                <div class="player-position">
+
+                    ${escapeHTML(
+                        player.position
+                    )}
+
+                </div>
+
+
+                <div>
+
+                    <div class="player-name">
+
+                        ${escapeHTML(
+                            player.name
+                        )}
+
+                    </div>
+
+                </div>
+
+
+                <div class="player-team">
+
+                    ${escapeHTML(
+                        player.team
+                    )}
+
+                </div>
+
+
+                <div class="player-points">
+
+                    —
+
+                </div>
+
+            `;
+
+
+            container.appendChild(
+                row
+            );
+
+        }
     );
 
 }
@@ -1665,325 +2107,4 @@ function loadPowerRankings(
 ) {
 
     const maxPoints =
-        Math.max(
-            ...teams.map(
-                team =>
-                    team.points
-            )
-        );
-
-
-    const powerTeams =
-        teams.map(team => {
-
-            const games =
-                team.wins +
-                team.losses +
-                team.ties;
-
-
-            let winPercentage =
-                0;
-
-
-            if (games > 0) {
-
-                winPercentage =
-
-                    (
-                        team.wins +
-                        team.ties * 0.5
-                    ) /
-                    games;
-
-            }
-
-
-            let pointScore =
-                0;
-
-
-            if (maxPoints > 0) {
-
-                pointScore =
-                    team.points /
-                    maxPoints;
-
-            }
-
-
-            const powerScore =
-
-                (
-                    winPercentage * 0.60 +
-                    pointScore * 0.40
-                ) * 100;
-
-
-            return {
-
-                ...team,
-                powerScore
-
-            };
-
-        });
-
-
-    powerTeams.sort(
-        (a, b) =>
-            b.powerScore -
-            a.powerScore
-    );
-
-
-    const container =
-        document.getElementById(
-            "powerRankings"
-        );
-
-
-    container.innerHTML = "";
-
-
-    powerTeams.forEach(
-        (team, index) => {
-
-            const rank =
-                index + 1;
-
-
-            let rankClass =
-                "";
-
-
-            if (rank === 1) {
-
-                rankClass =
-                    "rank-1";
-
-            }
-
-            else if (rank === 2) {
-
-                rankClass =
-                    "rank-2";
-
-            }
-
-            else if (rank === 3) {
-
-                rankClass =
-                    "rank-3";
-
-            }
-
-
-            const row =
-                document.createElement(
-                    "tr"
-                );
-
-
-            row.innerHTML = `
-
-                <td class="rank ${rankClass}">
-                    ${rank}
-                </td>
-
-                <td>
-
-                    <div class="team-name">
-                        ${escapeHTML(
-                            team.teamName
-                        )}
-                    </div>
-
-                    <div class="manager">
-                        ${escapeHTML(
-                            team.manager
-                        )}
-                    </div>
-
-                </td>
-
-                <td class="record">
-
-                    ${team.wins}-
-                    ${team.losses}
-                    ${team.ties
-                        ? "-" +
-                          team.ties
-                        : ""}
-
-                </td>
-
-                <td>
-
-                    ${team.points.toFixed(2)}
-
-                </td>
-
-                <td class="power-score">
-
-                    ${team.powerScore.toFixed(1)}
-
-                    <div class="score-bar-container">
-
-                        <div
-                            class="score-bar"
-                            style="
-                                width:
-                                ${Math.min(
-                                    team.powerScore,
-                                    100
-                                )}%
-                            "
-                        ></div>
-
-                    </div>
-
-                </td>
-
-            `;
-
-
-            container.appendChild(
-                row
-            );
-
-        }
-    );
-
-}
-
-
-
-/* =========================
-   STANDINGS
-   ========================= */
-
-function loadStandings(
-    sortedTeams
-) {
-
-    const container =
-        document.getElementById(
-            "standings"
-        );
-
-
-    container.innerHTML = "";
-
-
-    sortedTeams.forEach(
-        team => {
-
-            const row =
-                document.createElement(
-                    "tr"
-                );
-
-
-            row.innerHTML = `
-
-                <td>
-
-                    <div class="team-name">
-                        ${escapeHTML(
-                            team.teamName
-                        )}
-                    </div>
-
-                </td>
-
-                <td>
-
-                    <div class="manager">
-                        ${escapeHTML(
-                            team.manager
-                        )}
-                    </div>
-
-                </td>
-
-                <td class="record">
-
-                    ${team.wins}-
-                    ${team.losses}
-                    ${team.ties
-                        ? "-" +
-                          team.ties
-                        : ""}
-
-                </td>
-
-                <td class="number">
-
-                    ${team.points.toFixed(2)}
-
-                </td>
-
-            `;
-
-
-            container.appendChild(
-                row
-            );
-
-        }
-    );
-
-}
-
-
-
-/* =========================
-   HTML SECURITY
-   ========================= */
-
-function escapeHTML(
-    value
-) {
-
-    return String(value)
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-
-/* =========================
-   START
-   ========================= */
-
-loadLeague();
-
-</script>
-
-</body>
-</html>
+        Math
