@@ -357,6 +357,102 @@
       line-height: 1.5;
     }
 
+    /* LEAGUE HISTORY */
+
+    .history-list {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .history-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .history-card.current {
+      border: 2px solid #3b82f6;
+      background: #eff6ff;
+    }
+
+    .history-card.completed {
+      border-left: 5px solid #f59e0b;
+    }
+
+    .history-season {
+      font-size: 14px;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .history-champion {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .history-runner {
+      margin: 10px 0 16px;
+      color: #475569;
+    }
+
+    .history-status {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      background: #dbeafe;
+      color: #1d4ed8;
+      margin-bottom: 12px;
+    }
+
+    .history-status.completed-status {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .history-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .history-stat {
+      background: white;
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .history-stat-label {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 3px;
+    }
+
+    .history-stat-value {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .history-empty {
+      color: #64748b;
+      padding: 15px 0;
+    }
+
+    .history-loading {
+      text-align: center;
+      padding: 25px;
+      color: #64748b;
+    }
+
     .empty {
       color: #64748b;
       font-size: 14px;
@@ -387,6 +483,10 @@
 
       .vs {
         margin: -5px 0;
+      }
+
+      .history-row {
+        grid-template-columns: 1fr;
       }
 
     }
@@ -715,6 +815,46 @@
     <h2>📋 Standings</h2>
 
     <div id="standings"></div>
+
+  </div>
+
+
+  <!-- PAST CHAMPIONS -->
+
+  <div class="section">
+
+    <h2>🏆 Past Champions</h2>
+
+    <p style="color:#64748b;">
+      Noke Football championship history.
+    </p>
+
+    <div id="pastChampions">
+      <div class="history-loading">
+        Loading championship history...
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- LEAGUE HISTORY -->
+
+  <div class="section">
+
+    <h2>📜 League History</h2>
+
+    <p style="color:#64748b;">
+      Complete Noke Football history pulled directly from Sleeper.
+    </p>
+
+    <div id="leagueHistory">
+
+      <div class="history-loading">
+        Loading league history...
+      </div>
+
+    </div>
 
   </div>
 
@@ -2608,7 +2748,6 @@ function addTradePlayer(
   input.value =
     "";
 
-
   results.innerHTML =
     "";
 
@@ -3562,6 +3701,877 @@ function loadStandings() {
 
 
 /* =========================================================
+   PAST CHAMPIONS / LEAGUE HISTORY
+========================================================= */
+
+async function loadLeagueHistory() {
+
+  const historyContainer =
+    document.getElementById(
+      "leagueHistory"
+    );
+
+  const championsContainer =
+    document.getElementById(
+      "pastChampions"
+    );
+
+
+  try {
+
+    const history = [];
+
+    let leagueId =
+      LEAGUE_ID;
+
+    let isCurrentSeason =
+      true;
+
+    const visited =
+      new Set();
+
+
+    /*
+     * Follow Sleeper's previous_league_id
+     * backward through each season.
+     */
+
+    while (
+      leagueId &&
+      !visited.has(
+        leagueId
+      )
+    ) {
+
+      visited.add(
+        leagueId
+      );
+
+
+      const league =
+        await sleeper(
+          "/league/" +
+          leagueId
+        );
+
+
+      const [
+        users,
+        rosters,
+        bracket
+      ] = await Promise.all([
+
+        sleeper(
+          "/league/" +
+          leagueId +
+          "/users"
+        ),
+
+        sleeper(
+          "/league/" +
+          leagueId +
+          "/rosters"
+        ),
+
+        sleeper(
+          "/league/" +
+          leagueId +
+          "/winners_bracket"
+        )
+
+      ]);
+
+
+      /*
+       * Build user/team name map.
+       */
+
+      const userMap =
+        {};
+
+
+      users.forEach(
+        user => {
+
+          userMap[
+            user.user_id
+          ] =
+            user.metadata?.team_name ||
+            user.display_name ||
+            user.username ||
+            "Unknown Team";
+
+        }
+      );
+
+
+      /*
+       * Build roster map.
+       */
+
+      const rosterMap =
+        {};
+
+
+      rosters.forEach(
+        roster => {
+
+          rosterMap[
+            roster.roster_id
+          ] =
+            roster;
+
+        }
+      );
+
+
+      /*
+       * Find the championship
+       * matchup in the winners bracket.
+       */
+
+      let championship =
+        null;
+
+
+      if (
+        Array.isArray(
+          bracket
+        ) &&
+        bracket.length > 0
+      ) {
+
+        const completedGames =
+          bracket.filter(
+            game =>
+              game &&
+              game.w != null &&
+              game.l != null
+          );
+
+
+        if (
+          completedGames.length > 0
+        ) {
+
+          const maxRound =
+            Math.max(
+              ...completedGames.map(
+                game =>
+                  Number(
+                    game.r
+                  ) || 0
+              )
+            );
+
+
+          const finalGames =
+            completedGames.filter(
+              game =>
+                Number(
+                  game.r
+                ) ===
+                maxRound
+            );
+
+
+          championship =
+            finalGames[
+              finalGames.length - 1
+            ] || null;
+
+        }
+
+      }
+
+
+      let champion =
+        null;
+
+      let runnerUp =
+        null;
+
+
+      if (
+        championship
+      ) {
+
+        const championRoster =
+          rosterMap[
+            championship.w
+          ];
+
+
+        const runnerUpRoster =
+          rosterMap[
+            championship.l
+          ];
+
+
+        champion = {
+
+          rosterId:
+            championship.w,
+
+          name:
+            championRoster
+              ? (
+                  userMap[
+                    championRoster.owner_id
+                  ] ||
+                  "Unknown Team"
+                )
+              : "Unknown Team",
+
+          wins:
+            championRoster?.settings?.wins ??
+            0,
+
+          losses:
+            championRoster?.settings?.losses ??
+            0,
+
+          ties:
+            championRoster?.settings?.ties ??
+            0,
+
+          points:
+            championRoster?.settings?.fpts ??
+            0
+
+        };
+
+
+        runnerUp = {
+
+          rosterId:
+            championship.l,
+
+          name:
+            runnerUpRoster
+              ? (
+                  userMap[
+                    runnerUpRoster.owner_id
+                  ] ||
+                  "Unknown Team"
+                )
+              : "Unknown Team"
+
+        };
+
+      }
+
+
+      /*
+       * Find the regular-season champion.
+       *
+       * Primary sorting:
+       * 1. Wins
+       * 2. Points For
+       */
+
+      const sortedRosters =
+        [...rosters].sort(
+          (a,b) => {
+
+            const aWins =
+              Number(
+                a.settings?.wins ||
+                0
+              );
+
+            const bWins =
+              Number(
+                b.settings?.wins ||
+                0
+              );
+
+
+            if (
+              bWins !==
+              aWins
+            ) {
+
+              return (
+                bWins -
+                aWins
+              );
+
+            }
+
+
+            const aPoints =
+              Number(
+                a.settings?.fpts ||
+                0
+              );
+
+            const bPoints =
+              Number(
+                b.settings?.fpts ||
+                0
+              );
+
+
+            return (
+              bPoints -
+              aPoints
+            );
+
+          }
+        );
+
+
+      const regularSeasonChampion =
+        sortedRosters[0];
+
+
+      let regularSeasonChampionData =
+        null;
+
+
+      if (
+        regularSeasonChampion
+      ) {
+
+        regularSeasonChampionData = {
+
+          name:
+            userMap[
+              regularSeasonChampion.owner_id
+            ] ||
+            "Unknown Team",
+
+          wins:
+            Number(
+              regularSeasonChampion.settings?.wins ||
+              0
+            ),
+
+          losses:
+            Number(
+              regularSeasonChampion.settings?.losses ||
+              0
+            ),
+
+          ties:
+            Number(
+              regularSeasonChampion.settings?.ties ||
+              0
+            ),
+
+          points:
+            Number(
+              regularSeasonChampion.settings?.fpts ||
+              0
+            )
+
+        };
+
+      }
+
+
+      history.push({
+
+        season:
+          league.season ||
+          "Unknown",
+
+        leagueId,
+
+        latest:
+          isCurrentSeason,
+
+        champion,
+
+        runnerUp,
+
+        regularSeasonChampion:
+          regularSeasonChampionData,
+
+        teamCount:
+          league.total_rosters ||
+          rosters.length ||
+          "—"
+
+      });
+
+
+      /*
+       * Move to the previous season.
+       */
+
+      leagueId =
+        league.previous_league_id ||
+        null;
+
+
+      isCurrentSeason =
+        false;
+
+    }
+
+
+    renderLeagueHistory(
+      history
+    );
+
+
+    renderPastChampions(
+      history
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "League history error:",
+      error
+    );
+
+
+    historyContainer.innerHTML = `
+
+      <div class="history-empty">
+
+        Unable to load league history.
+
+        <br>
+
+        <small>
+          ${escapeHtml(
+            error.message
+          )}
+        </small>
+
+      </div>
+
+    `;
+
+
+    championsContainer.innerHTML = `
+
+      <div class="history-empty">
+
+        Unable to load championship history.
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   RENDER LEAGUE HISTORY
+========================================================= */
+
+function renderLeagueHistory(
+  history
+) {
+
+  const container =
+    document.getElementById(
+      "leagueHistory"
+    );
+
+
+  if (
+    !history ||
+    history.length === 0
+  ) {
+
+    container.innerHTML = `
+
+      <div class="history-empty">
+
+        No league history found.
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    history.map(
+      record => {
+
+        const hasChampion =
+          !!record.champion;
+
+
+        const championName =
+          record.champion?.name ||
+          "Championship not completed";
+
+
+        const runnerUpName =
+          record.runnerUp?.name ||
+          "—";
+
+
+        const championRecord =
+          record.champion
+            ? (
+                record.champion.wins +
+                "-" +
+                record.champion.losses +
+                (
+                  record.champion.ties
+                    ? "-" +
+                      record.champion.ties
+                    : ""
+                )
+              )
+            : "—";
+
+
+        const championPoints =
+          record.champion
+            ? formatNumber(
+                record.champion.points
+              )
+            : "—";
+
+
+        const regularSeason =
+          record.regularSeasonChampion;
+
+
+        const regularSeasonRecord =
+          regularSeason
+            ? (
+                regularSeason.wins +
+                "-" +
+                regularSeason.losses +
+                (
+                  regularSeason.ties
+                    ? "-" +
+                      regularSeason.ties
+                    : ""
+                )
+              )
+            : "—";
+
+
+        return `
+
+          <div
+            class="history-card
+              ${record.latest
+                ? "current"
+                : "completed"}"
+          >
+
+
+            <div class="history-season">
+
+              ${escapeHtml(
+                record.season
+              )}
+
+            </div>
+
+
+            <div>
+
+              <span
+                class="history-status
+                  ${hasChampion
+                    ? "completed-status"
+                    : ""}"
+              >
+
+                ${hasChampion
+                  ? "🏁 Season Complete"
+                  : "🏈 Current Season"}
+
+              </span>
+
+            </div>
+
+
+            <div class="history-champion">
+
+              🏆
+              ${escapeHtml(
+                championName
+              )}
+
+            </div>
+
+
+            <div class="history-runner">
+
+              🥈 Runner-up:
+
+              <strong>
+                ${escapeHtml(
+                  runnerUpName
+                )}
+              </strong>
+
+            </div>
+
+
+            <div class="history-row">
+
+
+              <div class="history-stat">
+
+                <div class="history-stat-label">
+
+                  Regular Season Champion
+
+                </div>
+
+                <div class="history-stat-value">
+
+                  ${escapeHtml(
+                    regularSeason?.name ||
+                    "—"
+                  )}
+
+                </div>
+
+              </div>
+
+
+              <div class="history-stat">
+
+                <div class="history-stat-label">
+
+                  Regular Season Record
+
+                </div>
+
+                <div class="history-stat-value">
+
+                  ${regularSeasonRecord}
+
+                </div>
+
+              </div>
+
+
+              <div class="history-stat">
+
+                <div class="history-stat-label">
+
+                  Champion's Record
+
+                </div>
+
+                <div class="history-stat-value">
+
+                  ${championRecord}
+
+                </div>
+
+              </div>
+
+
+              <div class="history-stat">
+
+                <div class="history-stat-label">
+
+                  Champion's Points
+
+                </div>
+
+                <div class="history-stat-value">
+
+                  ${championPoints}
+
+                </div>
+
+              </div>
+
+
+              <div class="history-stat">
+
+                <div class="history-stat-label">
+
+                  League Size
+
+                </div>
+
+                <div class="history-stat-value">
+
+                  ${record.teamCount}
+                  teams
+
+                </div>
+
+              </div>
+
+
+            </div>
+
+
+          </div>
+
+        `;
+
+      }
+    ).join("");
+
+}
+
+
+/* =========================================================
+   RENDER PAST CHAMPIONS
+========================================================= */
+
+function renderPastChampions(
+  history
+) {
+
+  const container =
+    document.getElementById(
+      "pastChampions"
+    );
+
+
+  /*
+   * Only display seasons that
+   * actually have a champion.
+   */
+
+  const completed =
+    history.filter(
+      record =>
+        record.champion
+    );
+
+
+  if (
+    completed.length === 0
+  ) {
+
+    container.innerHTML = `
+
+      <div class="history-empty">
+
+        No completed championships found yet.
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    completed.map(
+      record => {
+
+        return `
+
+          <div
+            class="history-card completed"
+          >
+
+            <div class="history-season">
+
+              ${escapeHtml(
+                record.season
+              )}
+
+            </div>
+
+
+            <div class="history-champion">
+
+              🏆
+              ${escapeHtml(
+                record.champion.name
+              )}
+
+            </div>
+
+
+            <div class="history-runner">
+
+              🥈 Runner-up:
+
+              <strong>
+
+                ${escapeHtml(
+                  record.runnerUp?.name ||
+                  "—"
+                )}
+
+              </strong>
+
+            </div>
+
+
+            <div class="history-row">
+
+
+              <div class="history-stat">
+
+                <div class="history-stat-label">
+
+                  Champion's Record
+
+                </div>
+
+                <div class="history-stat-value">
+
+                  ${record.champion.wins}-
+                  ${record.champion.losses}
+                  ${record.champion.ties
+                    ? "-" +
+                      record.champion.ties
+                    : ""}
+
+                </div>
+
+              </div>
+
+
+              <div class="history-stat">
+
+                <div class="history-stat-label">
+
+                  Champion's Points
+
+                </div>
+
+                <div class="history-stat-value">
+
+                  ${formatNumber(
+                    record.champion.points
+                  )}
+
+                </div>
+
+              </div>
+
+
+            </div>
+
+          </div>
+
+        `;
+
+      }
+    ).join("");
+
+}
+
+
+/* =========================================================
    HELPERS
 ========================================================= */
 
@@ -3582,7 +4592,7 @@ function escapeHtml(
 ) {
 
   return String(
-    value
+    value ?? ""
   )
     .replace(
       /&/g,
@@ -3613,6 +4623,9 @@ function escapeHtml(
 ========================================================= */
 
 loadLeague();
+
+loadLeagueHistory();
+
 
 </script>
 
