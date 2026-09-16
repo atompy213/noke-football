@@ -67,21 +67,76 @@ main {
 
 
 /* =========================
+   TEAM SELECTOR
+   ========================= */
+
+.team-selector {
+    background: #181a20;
+    border: 1px solid #2c2f36;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.team-selector label {
+    display: block;
+    color: #999;
+    font-size: 13px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.team-selector select {
+    width: 100%;
+    max-width: 500px;
+    background: #101114;
+    color: #f5f5f5;
+    border: 1px solid #3a3d45;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+
+/* =========================
    DASHBOARD
    ========================= */
+
+section {
+    background: #181a20;
+    border: 1px solid #2c2f36;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 25px;
+}
+
+section h2 {
+    margin: 0;
+    padding: 18px 20px;
+    border-bottom: 1px solid #2c2f36;
+    font-size: 20px;
+}
+
+.description {
+    padding: 12px 20px;
+    color: #999;
+    font-size: 14px;
+    border-bottom: 1px solid #292c32;
+}
 
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 15px;
-    margin-bottom: 25px;
+    margin: 20px;
 }
 
 .dashboard-card {
-    background: #181a20;
+    background: #101114;
     border: 1px solid #2c2f36;
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: 10px;
+    padding: 18px;
 }
 
 .dashboard-card h3 {
@@ -95,12 +150,6 @@ main {
 .dashboard-card .value {
     font-size: 27px;
     font-weight: bold;
-}
-
-.dashboard-card .small {
-    margin-top: 5px;
-    color: #888;
-    font-size: 13px;
 }
 
 
@@ -157,12 +206,6 @@ main {
     font-weight: bold;
 }
 
-.matchup-record {
-    color: #999;
-    font-size: 13px;
-    margin-top: 5px;
-}
-
 .vs {
     font-size: 16px;
     color: #777;
@@ -174,33 +217,6 @@ main {
     padding: 0 20px 20px;
     font-weight: bold;
     font-size: 16px;
-}
-
-
-/* =========================
-   GENERAL SECTIONS
-   ========================= */
-
-section {
-    background: #181a20;
-    border: 1px solid #2c2f36;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 25px;
-}
-
-section h2 {
-    margin: 0;
-    padding: 18px 20px;
-    border-bottom: 1px solid #2c2f36;
-    font-size: 20px;
-}
-
-section .description {
-    padding: 12px 20px;
-    color: #999;
-    font-size: 14px;
-    border-bottom: 1px solid #292c32;
 }
 
 
@@ -292,6 +308,15 @@ tr:last-child td {
 
 
 /* =========================
+   SELECTED TEAM
+   ========================= */
+
+.selected-team {
+    border: 1px solid #4d8cff;
+}
+
+
+/* =========================
    MOBILE
    ========================= */
 
@@ -371,13 +396,34 @@ tr:last-child td {
 <main>
 
 <!-- =========================
-     CONNECTION STATUS
+     STATUS
      ========================= -->
 
-<div id="status" class="status loading">
+<div
+    id="status"
+    class="status loading"
+>
+    Connecting to Sleeper...
+</div>
+
+<!-- =========================
+     TEAM SELECTOR
+     ========================= -->
+
+<div class="team-selector">
 
 ```
-Connecting to Sleeper...
+<label for="teamSelect">
+    View Team Dashboard
+</label>
+
+<select id="teamSelect">
+
+    <option value="">
+        Loading teams...
+    </option>
+
+</select>
 ```
 
 </div>
@@ -389,18 +435,28 @@ Connecting to Sleeper...
 <section>
 
 ```
-<h2>🏠 My Team Dashboard</h2>
+<h2>
+    🏠 <span id="dashboardTitle">
+        Team Dashboard
+    </span>
+</h2>
 
-<div class="description" id="myTeamName">
-    Loading your team...
+<div
+    class="description"
+    id="myTeamName"
+>
+    Loading team...
 </div>
 
 
 <div class="dashboard-grid">
 
+
     <div class="dashboard-card">
 
-        <h3>Record</h3>
+        <h3>
+            Record
+        </h3>
 
         <div
             class="value"
@@ -414,7 +470,9 @@ Connecting to Sleeper...
 
     <div class="dashboard-card">
 
-        <h3>League Rank</h3>
+        <h3>
+            League Rank
+        </h3>
 
         <div
             class="value"
@@ -428,7 +486,9 @@ Connecting to Sleeper...
 
     <div class="dashboard-card">
 
-        <h3>Points For</h3>
+        <h3>
+            Points For
+        </h3>
 
         <div
             class="value"
@@ -442,7 +502,9 @@ Connecting to Sleeper...
 
     <div class="dashboard-card">
 
-        <h3>Points Against</h3>
+        <h3>
+            Points Against
+        </h3>
 
         <div
             class="value"
@@ -452,6 +514,7 @@ Connecting to Sleeper...
         </div>
 
     </div>
+
 
 </div>
 ```
@@ -483,13 +546,14 @@ Connecting to Sleeper...
 
 <div class="matchup-body">
 
+
     <div class="matchup-team">
 
         <div
             class="matchup-team-name"
             id="myMatchupTeam"
         >
-            My Team
+            Team
         </div>
 
         <div
@@ -525,6 +589,7 @@ Connecting to Sleeper...
 
     </div>
 
+
 </div>
 
 
@@ -547,7 +612,9 @@ Connecting to Sleeper...
 ```
 <div class="dashboard-card">
 
-    <h3>League</h3>
+    <h3>
+        League
+    </h3>
 
     <div
         class="value"
@@ -561,7 +628,9 @@ Connecting to Sleeper...
 
 <div class="dashboard-card">
 
-    <h3>Season</h3>
+    <h3>
+        Season
+    </h3>
 
     <div
         class="value"
@@ -575,7 +644,9 @@ Connecting to Sleeper...
 
 <div class="dashboard-card">
 
-    <h3>Teams</h3>
+    <h3>
+        Teams
+    </h3>
 
     <div
         class="value"
@@ -589,7 +660,9 @@ Connecting to Sleeper...
 
 <div class="dashboard-card">
 
-    <h3>Scoring</h3>
+    <h3>
+        Scoring
+    </h3>
 
     <div
         class="value"
@@ -614,6 +687,7 @@ Connecting to Sleeper...
     ⚡ Power Rankings
 </h2>
 
+
 <div class="description">
 
     Rankings based on a combination
@@ -628,13 +702,21 @@ Connecting to Sleeper...
 
         <tr>
 
-            <th>Rank</th>
+            <th>
+                Rank
+            </th>
 
-            <th>Team</th>
+            <th>
+                Team
+            </th>
 
-            <th>Record</th>
+            <th>
+                Record
+            </th>
 
-            <th>Points</th>
+            <th>
+                Points
+            </th>
 
             <th class="number">
                 Power Score
@@ -684,11 +766,17 @@ Connecting to Sleeper...
 
         <tr>
 
-            <th>Team</th>
+            <th>
+                Team
+            </th>
 
-            <th>Manager</th>
+            <th>
+                Manager
+            </th>
 
-            <th>Record</th>
+            <th>
+                Record
+            </th>
 
             <th class="number">
                 Points
@@ -732,10 +820,6 @@ Connecting to Sleeper...
 const LEAGUE_ID =
     "1387224646096539648";
 
-const USERNAME =
-    "Atompski";
-
-
 
 /* =========================
    SLEEPER API
@@ -753,12 +837,10 @@ async function sleeper(path) {
     if (!response.ok) {
 
         throw new Error(
-
             "Sleeper API returned " +
             response.status +
             " for " +
             path
-
         );
 
     }
@@ -767,6 +849,18 @@ async function sleeper(path) {
     return await response.json();
 
 }
+
+
+
+/* =========================
+   GLOBAL DATA
+   ========================= */
+
+let leagueData = null;
+
+let teamsData = [];
+
+let matchupData = [];
 
 
 
@@ -787,8 +881,7 @@ async function loadLeague() {
 
         /*
          * Get league information,
-         * users, rosters, and current
-         * matchup information.
+         * users, and rosters.
          */
 
         const [
@@ -815,6 +908,10 @@ async function loadLeague() {
             )
 
         ]);
+
+
+        leagueData =
+            league;
 
 
 
@@ -891,7 +988,7 @@ async function loadLeague() {
 
 
         /* =========================
-           USER LOOKUP
+           USER MAP
            ========================= */
 
         const userMap = {};
@@ -907,10 +1004,10 @@ async function loadLeague() {
 
 
         /* =========================
-           BUILD TEAM DATA
+           BUILD TEAMS
            ========================= */
 
-        const teams =
+        teamsData =
             rosters.map(roster => {
 
                 const user =
@@ -932,18 +1029,24 @@ async function loadLeague() {
 
 
                 const wins =
-                    roster.settings?.wins ||
-                    0;
+                    Number(
+                        roster.settings?.wins ||
+                        0
+                    );
 
 
                 const losses =
-                    roster.settings?.losses ||
-                    0;
+                    Number(
+                        roster.settings?.losses ||
+                        0
+                    );
 
 
                 const ties =
-                    roster.settings?.ties ||
-                    0;
+                    Number(
+                        roster.settings?.ties ||
+                        0
+                    );
 
 
                 const points =
@@ -978,57 +1081,66 @@ async function loadLeague() {
 
 
         /* =========================
-           FIND MY TEAM
+           TEAM SELECTOR
            ========================= */
 
-        const myUser =
-            users.find(user => {
-
-                return (
-
-                    user.display_name
-                        ?.toLowerCase() ===
-                    USERNAME.toLowerCase()
-
-                    ||
-
-                    user.username
-                        ?.toLowerCase() ===
-                    USERNAME.toLowerCase()
-
-                );
-
-            });
+        populateTeamSelector();
 
 
-        if (!myUser) {
 
-            throw new Error(
+        /* =========================
+           INITIAL TEAM
+           ========================= */
 
-                "Could not find Sleeper user " +
-                USERNAME +
-                " in this league."
-
+        const urlParams =
+            new URLSearchParams(
+                window.location.search
             );
+
+
+        const urlTeam =
+            urlParams.get("team");
+
+
+        let selectedTeam;
+
+
+        if (urlTeam) {
+
+            selectedTeam =
+                teamsData.find(
+                    team =>
+                        String(
+                            team.roster.roster_id
+                        ) ===
+                        String(urlTeam)
+                );
 
         }
 
 
-        const myTeam =
-            teams.find(team =>
+        if (!selectedTeam) {
 
-                team.roster.owner_id ===
-                myUser.user_id
+            /*
+             * If no team is specified,
+             * default to the first team.
+             */
 
-            );
+            selectedTeam =
+                teamsData[0];
+
+        }
 
 
-        if (!myTeam) {
+        if (selectedTeam) {
 
-            throw new Error(
+            document.getElementById(
+                "teamSelect"
+            ).value =
+                selectedTeam.roster.roster_id;
 
-                "Could not find your roster."
-
+            await selectTeam(
+                selectedTeam
             );
 
         }
@@ -1036,11 +1148,21 @@ async function loadLeague() {
 
 
         /* =========================
-           FIND LEAGUE RANK
+           POWER RANKINGS
+           ========================= */
+
+        loadPowerRankings(
+            teamsData
+        );
+
+
+
+        /* =========================
+           STANDINGS
            ========================= */
 
         const sortedTeams =
-            [...teams].sort(
+            [...teamsData].sort(
                 (a, b) => {
 
                     if (
@@ -1064,84 +1186,6 @@ async function loadLeague() {
                 }
             );
 
-
-        const myRank =
-            sortedTeams.findIndex(
-                team =>
-                    team.roster.roster_id ===
-                    myTeam.roster.roster_id
-            ) + 1;
-
-
-
-        /* =========================
-           DASHBOARD
-           ========================= */
-
-        document.getElementById(
-            "myTeamName"
-        ).textContent =
-            myTeam.teamName +
-            " • Manager: " +
-            myTeam.manager;
-
-
-        document.getElementById(
-            "myRecord"
-        ).textContent =
-            `${myTeam.wins}-${myTeam.losses}` +
-            (
-                myTeam.ties
-                    ? "-" + myTeam.ties
-                    : ""
-            );
-
-
-        document.getElementById(
-            "myRank"
-        ).textContent =
-            "#" +
-            myRank;
-
-
-        document.getElementById(
-            "myPointsFor"
-        ).textContent =
-            myTeam.points.toFixed(2);
-
-
-        document.getElementById(
-            "myPointsAgainst"
-        ).textContent =
-            myTeam.pointsAgainst.toFixed(2);
-
-
-
-        /* =========================
-           WEEKLY MATCHUP
-           ========================= */
-
-        await loadMatchup(
-            myTeam,
-            teams,
-            league
-        );
-
-
-
-        /* =========================
-           POWER RANKINGS
-           ========================= */
-
-        loadPowerRankings(
-            teams
-        );
-
-
-
-        /* =========================
-           STANDINGS
-           ========================= */
 
         loadStandings(
             sortedTeams
@@ -1180,16 +1224,221 @@ async function loadLeague() {
 
             escapeHTML(
                 error.message
-            ) +
-
-            "<br><br>" +
-
-            "If this message mentions CORS, " +
-            "Sleeper is blocking direct browser " +
-            "requests. If that happens, we'll " +
-            "use the existing GitHub-compatible proxy.";
+            );
 
     }
+
+}
+
+
+
+/* =========================
+   TEAM SELECTOR
+   ========================= */
+
+function populateTeamSelector() {
+
+    const select =
+        document.getElementById(
+            "teamSelect"
+        );
+
+
+    select.innerHTML = "";
+
+
+    const sortedTeams =
+        [...teamsData].sort(
+            (a, b) =>
+                a.teamName.localeCompare(
+                    b.teamName
+                )
+        );
+
+
+    sortedTeams.forEach(team => {
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+
+        option.value =
+            team.roster.roster_id;
+
+
+        option.textContent =
+            team.teamName +
+            " — " +
+            team.manager;
+
+
+        select.appendChild(
+            option
+        );
+
+    });
+
+
+    select.addEventListener(
+        "change",
+        async function() {
+
+            const rosterId =
+                this.value;
+
+
+            const team =
+                teamsData.find(
+                    team =>
+                        String(
+                            team.roster.roster_id
+                        ) ===
+                        String(rosterId)
+                );
+
+
+            if (team) {
+
+                await selectTeam(
+                    team
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+
+/* =========================
+   SELECT TEAM
+   ========================= */
+
+async function selectTeam(team) {
+
+    /*
+     * Update URL so dashboards
+     * can be shared directly.
+     */
+
+    const newUrl =
+        window.location.pathname +
+        "?team=" +
+        team.roster.roster_id;
+
+
+    window.history.replaceState(
+        {},
+        "",
+        newUrl
+    );
+
+
+    /* =========================
+       TEAM INFORMATION
+       ========================= */
+
+    document.getElementById(
+        "dashboardTitle"
+    ).textContent =
+        team.teamName;
+
+
+    document.getElementById(
+        "myTeamName"
+    ).textContent =
+        team.teamName +
+        " • Manager: " +
+        team.manager;
+
+
+    document.getElementById(
+        "myRecord"
+    ).textContent =
+        `${team.wins}-${team.losses}` +
+        (
+            team.ties
+                ? "-" +
+                  team.ties
+                : ""
+        );
+
+
+
+    /* =========================
+       LEAGUE RANK
+       ========================= */
+
+    const sortedTeams =
+        [...teamsData].sort(
+            (a, b) => {
+
+                if (
+                    b.wins !==
+                    a.wins
+                ) {
+
+                    return (
+                        b.wins -
+                        a.wins
+                    );
+
+                }
+
+
+                return (
+                    b.points -
+                    a.points
+                );
+
+            }
+        );
+
+
+    const rank =
+        sortedTeams.findIndex(
+            other =>
+                other.roster.roster_id ===
+                team.roster.roster_id
+        ) + 1;
+
+
+    document.getElementById(
+        "myRank"
+    ).textContent =
+        "#" +
+        rank;
+
+
+
+    /* =========================
+       POINTS
+       ========================= */
+
+    document.getElementById(
+        "myPointsFor"
+    ).textContent =
+        team.points.toFixed(2);
+
+
+    document.getElementById(
+        "myPointsAgainst"
+    ).textContent =
+        team.pointsAgainst.toFixed(2);
+
+
+
+    /* =========================
+       MATCHUP
+       ========================= */
+
+    await loadMatchup(
+        team
+    );
 
 }
 
@@ -1200,20 +1449,12 @@ async function loadLeague() {
    ========================= */
 
 async function loadMatchup(
-    myTeam,
-    teams,
-    league
+    selectedTeam
 ) {
 
-    /*
-     * Sleeper's current matchup
-     * endpoint uses the current
-     * league week.
-     */
-
-    const currentWeek =
-        league.settings?.leg ||
-        league.settings?.week ||
+    const week =
+        leagueData?.settings?.leg ||
+        leagueData?.settings?.week ||
         1;
 
 
@@ -1221,23 +1462,144 @@ async function loadMatchup(
         "weekNumber"
     ).textContent =
         "Week " +
-        currentWeek;
-
-
-    let matchups;
+        week;
 
 
     try {
 
-        matchups =
+        const matchups =
             await sleeper(
 
                 "/league/" +
                 LEAGUE_ID +
                 "/matchups/" +
-                currentWeek
+                week
 
             );
+
+
+        const myMatchup =
+            matchups.find(
+                matchup =>
+                    matchup.roster_id ===
+                    selectedTeam.roster.roster_id
+            );
+
+
+        if (!myMatchup) {
+
+            showNoMatchup(
+                "No matchup found for this week."
+            );
+
+            return;
+
+        }
+
+
+        const opponent =
+            matchups.find(
+                matchup =>
+
+                    matchup.matchup_id ===
+                    myMatchup.matchup_id &&
+
+                    matchup.roster_id !==
+                    selectedTeam.roster.roster_id
+
+            );
+
+
+        if (!opponent) {
+
+            showNoMatchup(
+                "No opponent found."
+            );
+
+            return;
+
+        }
+
+
+        const opponentTeam =
+            teamsData.find(
+                team =>
+                    team.roster.roster_id ===
+                    opponent.roster_id
+            );
+
+
+        const myScore =
+            Number(
+                myMatchup.points ||
+                0
+            );
+
+
+        const opponentScore =
+            Number(
+                opponent.points ||
+                0
+            );
+
+
+        document.getElementById(
+            "myMatchupTeam"
+        ).textContent =
+            selectedTeam.teamName;
+
+
+        document.getElementById(
+            "opponentTeam"
+        ).textContent =
+            opponentTeam?.teamName ||
+            "Opponent";
+
+
+        document.getElementById(
+            "myMatchupScore"
+        ).textContent =
+            myScore.toFixed(2);
+
+
+        document.getElementById(
+            "opponentScore"
+        ).textContent =
+            opponentScore.toFixed(2);
+
+
+        const result =
+            document.getElementById(
+                "matchupResult"
+            );
+
+
+        if (
+            myScore >
+            opponentScore
+        ) {
+
+            result.textContent =
+                "🏆 Currently winning";
+
+        }
+
+        else if (
+            myScore <
+            opponentScore
+        ) {
+
+            result.textContent =
+                "Currently losing";
+
+        }
+
+        else {
+
+            result.textContent =
+                "Currently tied";
+
+        }
 
     }
 
@@ -1248,150 +1610,47 @@ async function loadMatchup(
             error
         );
 
-        document.getElementById(
-            "matchupResult"
-        ).textContent =
-            "Matchup data unavailable";
 
-        return;
+        showNoMatchup(
+            "Matchup data unavailable."
+        );
 
     }
 
-
-
-    const myMatchup =
-        matchups.find(
-            matchup =>
-                matchup.roster_id ===
-                myTeam.roster.roster_id
-        );
-
-
-    if (!myMatchup) {
-
-        document.getElementById(
-            "matchupResult"
-        ).textContent =
-            "No matchup found for this week.";
-
-        return;
-
-    }
+}
 
 
 
-    const opponent =
-        matchups.find(
-            matchup =>
+/* =========================
+   NO MATCHUP
+   ========================= */
 
-                matchup.matchup_id ===
-                myMatchup.matchup_id &&
-
-                matchup.roster_id !==
-                myTeam.roster.roster_id
-
-        );
-
-
-
-    if (!opponent) {
-
-        document.getElementById(
-            "matchupResult"
-        ).textContent =
-            "No opponent found.";
-
-        return;
-
-    }
-
-
-
-    const opponentTeam =
-        teams.find(team =>
-
-            team.roster.roster_id ===
-            opponent.roster_id
-
-        );
-
-
-
-    const myScore =
-        Number(
-            myMatchup.points || 0
-        );
-
-
-    const opponentScore =
-        Number(
-            opponent.points || 0
-        );
-
-
-
-    document.getElementById(
-        "myMatchupTeam"
-    ).textContent =
-        myTeam.teamName;
-
-
-    document.getElementById(
-        "opponentTeam"
-    ).textContent =
-        opponentTeam?.teamName ||
-        "Opponent";
-
+function showNoMatchup(
+    message
+) {
 
     document.getElementById(
         "myMatchupScore"
     ).textContent =
-        myScore.toFixed(2);
+        "—";
 
 
     document.getElementById(
         "opponentScore"
     ).textContent =
-        opponentScore.toFixed(2);
+        "—";
 
 
-
-    /*
-     * Determine matchup result.
-     */
-
-    const result =
-        document.getElementById(
-            "matchupResult"
-        );
+    document.getElementById(
+        "opponentTeam"
+    ).textContent =
+        "—";
 
 
-    if (
-        myScore >
-        opponentScore
-    ) {
-
-        result.textContent =
-            "🏆 Currently winning";
-
-    }
-
-    else if (
-        myScore <
-        opponentScore
-    ) {
-
-        result.textContent =
-            "Currently losing";
-
-    }
-
-    else {
-
-        result.textContent =
-            "Currently tied";
-
-    }
+    document.getElementById(
+        "matchupResult"
+    ).textContent =
+        message;
 
 }
 
@@ -1471,13 +1730,11 @@ function loadPowerRankings(
         });
 
 
-
     powerTeams.sort(
         (a, b) =>
             b.powerScore -
             a.powerScore
     );
-
 
 
     const container =
@@ -1487,7 +1744,6 @@ function loadPowerRankings(
 
 
     container.innerHTML = "";
-
 
 
     powerTeams.forEach(
@@ -1521,7 +1777,6 @@ function loadPowerRankings(
                     "rank-3";
 
             }
-
 
 
             const row =
