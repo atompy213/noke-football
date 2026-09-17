@@ -3945,66 +3945,7 @@ function searchPlayers() {
 function getPositionalRank(
   player
 ) {
-
-  if (
-    !player ||
-    !player.position
-  ) {
-
-    return "—";
-
-  }
-
-  const position =
-    player.position;
-
-  const positionPlayers =
-    allPlayers
-      .filter(
-        p =>
-          p &&
-          p.position ===
-            position &&
-          Number.isFinite(
-            Number(
-              p.search_rank
-            )
-          ) &&
-          Number(
-            p.search_rank
-          ) > 0
-      )
-      .sort(
-        (a,b) =>
-          Number(
-            a.search_rank
-          ) -
-          Number(
-            b.search_rank
-          )
-      );
-
-  const index =
-    positionPlayers.findIndex(
-      p =>
-        p.player_id ===
-        player.player_id
-    );
-
-  if (
-    index === -1
-  ) {
-
-    return "—";
-
-  }
-
-  return (
-    position +
-    " #" +
-    (index + 1)
-  );
-
+  return "—";
 }
 
 
@@ -4086,12 +4027,7 @@ function showPlayerInfo(
           "—"
         )}
 
-        ${infoItem(
-          "Positional Rank",
-          getPositionalRank(
-            player
-          )
-        )}
+        
 
         ${infoItem(
           "Fantasy Position",
