@@ -478,6 +478,149 @@
       color: #64748b;
     }
 
+    /* =========================================================
+       WEEKLY NEWSLETTER
+    ========================================================= */
+
+    .newsletter-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .newsletter-controls select {
+      width: auto;
+      min-width: 140px;
+    }
+
+    .newsletter-controls button {
+      background: #111827;
+      color: white;
+    }
+
+    .newsletter-header {
+      padding: 22px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #111827, #1f2937);
+      color: white;
+      margin-bottom: 20px;
+    }
+
+    .newsletter-header h2 {
+      margin: 0 0 6px;
+    }
+
+    .newsletter-header p {
+      margin: 0;
+      opacity: 0.8;
+    }
+
+    .newsletter-awards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .newsletter-award {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 18px;
+      background: #fff;
+    }
+
+    .newsletter-award h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .newsletter-award .award-winner {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .newsletter-award .award-stat {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .newsletter-award p {
+      margin-bottom: 0;
+      line-height: 1.5;
+    }
+
+    .newsletter-teams {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    .newsletter-team {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 18px;
+      background: #fff;
+    }
+
+    .newsletter-team h3 {
+      margin: 0 0 4px;
+    }
+
+    .newsletter-team .manager {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .newsletter-team .team-record {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .newsletter-team .team-score {
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+    }
+
+    .newsletter-team p {
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .newsletter-matchup {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    .newsletter-loading {
+      padding: 25px;
+      text-align: center;
+      color: #666;
+    }
+
+    .newsletter-error {
+      padding: 18px;
+      border-radius: 10px;
+      background: #fff3f3;
+      color: #a00;
+    }
+
+    @media (max-width: 600px) {
+
+      .newsletter-awards,
+      .newsletter-teams {
+        grid-template-columns: 1fr;
+      }
+
+    }
+
     @media (max-width: 800px) {
 
       .stats-grid {
@@ -519,6 +662,7 @@
   <div id="connectionStatus" class="connection">
     Connecting to Sleeper...
   </div>
+
 
   <!-- TEAM DASHBOARD -->
 
@@ -564,6 +708,40 @@
 
       <div class="loading">
         Loading matchup...
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- WEEKLY NEWSLETTER -->
+
+  <div class="section">
+
+    <h2>📰 Weekly Newsletter</h2>
+
+    <div class="newsletter-controls">
+
+      <label for="newsletterWeek">
+        <strong>Week:</strong>
+      </label>
+
+      <select id="newsletterWeek">
+        <option value="1">Week 1</option>
+        <option value="2">Week 2</option>
+      </select>
+
+      <button onclick="renderNewsletter()">
+        Refresh Newsletter
+      </button>
+
+    </div>
+
+    <div id="newsletter">
+
+      <div class="newsletter-loading">
+        Loading weekly newsletter...
       </div>
 
     </div>
@@ -913,7 +1091,6 @@ let allPlayers = [];
 
 let selectedTeamId = null;
 
-
 let tradeSideA = [];
 
 let tradeSideB = [];
@@ -954,7 +1131,6 @@ async function sleeper(path) {
       path
     );
 
-
   if (!response.ok) {
 
     throw new Error(
@@ -965,7 +1141,6 @@ async function sleeper(path) {
     );
 
   }
-
 
   return await response.json();
 
@@ -986,30 +1161,17 @@ async function loadFantasyCalcValues() {
 
   fantasyCalcValues = {};
 
-
-  /*
-   * First attempt:
-   * direct FantasyCalc API.
-   */
-
   try {
 
     const numTeams =
       teamsData.length ||
       10;
 
-
     const scoring =
       leagueData?.scoring_settings ||
       {};
 
-
     let ppr = 0;
-
-
-    /*
-     * Standard PPR
-     */
 
     if (
       Number(scoring.rec) >= 0.99
@@ -1019,11 +1181,6 @@ async function loadFantasyCalcValues() {
 
     }
 
-
-    /*
-     * Half PPR
-     */
-
     else if (
       Number(scoring.rec) >= 0.49
     ) {
@@ -1032,15 +1189,9 @@ async function loadFantasyCalcValues() {
 
     }
 
-
-    /*
-     * Detect Superflex / 2QB
-     */
-
     const rosterPositions =
       leagueData?.roster_positions ||
       [];
-
 
     const superflexCount =
       rosterPositions.filter(
@@ -1048,12 +1199,10 @@ async function loadFantasyCalcValues() {
           position === "SUPER_FLEX"
       ).length;
 
-
     const numQbs =
       superflexCount > 0
         ? 2
         : 1;
-
 
     const url =
       FANTASYCALC_API +
@@ -1065,12 +1214,10 @@ async function loadFantasyCalcValues() {
       "&ppr=" +
       ppr;
 
-
     console.log(
       "Trying live FantasyCalc:",
       url
     );
-
 
     const response =
       await fetch(
@@ -1079,7 +1226,6 @@ async function loadFantasyCalcValues() {
           cache: "no-store"
         }
       );
-
 
     if (!response.ok) {
 
@@ -1090,15 +1236,12 @@ async function loadFantasyCalcValues() {
 
     }
 
-
     const data =
       await response.json();
-
 
     buildFantasyCalcMap(
       data
     );
-
 
     if (
       Object.keys(
@@ -1112,29 +1255,17 @@ async function loadFantasyCalcValues() {
 
     }
 
-
     fantasyCalcSource =
       "live";
 
     fantasyCalcLoaded =
       true;
 
-
-    console.log(
-      "FantasyCalc live values loaded:",
-      Object.keys(
-        fantasyCalcValues
-      ).length
-    );
-
-
     updateFantasyCalcStatus();
 
     refreshTradeCalculator();
 
-
     return true;
-
 
   } catch (error) {
 
@@ -1144,14 +1275,6 @@ async function loadFantasyCalcValues() {
     );
 
   }
-
-
-  /*
-   * FALLBACK:
-   *
-   * Use the JSON file committed
-   * to GitHub by the GitHub Action.
-   */
 
   try {
 
@@ -1165,7 +1288,6 @@ async function loadFantasyCalcValues() {
         }
       );
 
-
     if (!response.ok) {
 
       throw new Error(
@@ -1175,15 +1297,12 @@ async function loadFantasyCalcValues() {
 
     }
 
-
     const data =
       await response.json();
-
 
     buildFantasyCalcMap(
       data
     );
-
 
     if (
       Object.keys(
@@ -1197,29 +1316,17 @@ async function loadFantasyCalcValues() {
 
     }
 
-
     fantasyCalcSource =
       "github";
 
     fantasyCalcLoaded =
       true;
 
-
-    console.log(
-      "FantasyCalc GitHub fallback loaded:",
-      Object.keys(
-        fantasyCalcValues
-      ).length
-    );
-
-
     updateFantasyCalcStatus();
 
     refreshTradeCalculator();
 
-
     return true;
-
 
   } catch (error) {
 
@@ -1228,18 +1335,15 @@ async function loadFantasyCalcValues() {
       error
     );
 
-
     fantasyCalcSource =
       "unavailable";
 
     fantasyCalcLoaded =
       false;
 
-
     updateFantasyCalcStatus();
 
     refreshTradeCalculator();
-
 
     return false;
 
@@ -1256,15 +1360,7 @@ function buildFantasyCalcMap(data) {
 
   fantasyCalcValues = {};
 
-
-  /*
-   * FantasyCalc may return an array
-   * directly or an object containing
-   * a players array.
-   */
-
   let rows = [];
-
 
   if (
     Array.isArray(data)
@@ -1297,7 +1393,6 @@ function buildFantasyCalcMap(data) {
 
   }
 
-
   rows.forEach(
     row => {
 
@@ -1305,13 +1400,11 @@ function buildFantasyCalcMap(data) {
         row?.player ||
         row;
 
-
       const sleeperId =
         player?.sleeperId ||
         player?.sleeper_id ||
         row?.sleeperId ||
         row?.sleeper_id;
-
 
       const value =
         row?.value ??
@@ -1320,7 +1413,6 @@ function buildFantasyCalcMap(data) {
         player?.value ??
         player?.tradeValue ??
         player?.trade_value;
-
 
       if (
         sleeperId &&
@@ -1339,14 +1431,6 @@ function buildFantasyCalcMap(data) {
     }
   );
 
-
-  console.log(
-    "FantasyCalc player map:",
-    Object.keys(
-      fantasyCalcValues
-    ).length
-  );
-
 }
 
 
@@ -1361,9 +1445,7 @@ function updateFantasyCalcStatus() {
       "fantasyCalcStatus"
     );
 
-
   if (!element) return;
-
 
   if (
     fantasyCalcSource === "live"
@@ -1382,7 +1464,6 @@ function updateFantasyCalcStatus() {
 
   }
 
-
   if (
     fantasyCalcSource === "github"
   ) {
@@ -1399,7 +1480,6 @@ function updateFantasyCalcStatus() {
     return;
 
   }
-
 
   element.innerHTML =
     "🔴 <strong>FantasyCalc:</strong> Values unavailable";
@@ -1452,14 +1532,11 @@ async function loadLeague() {
 
       ]);
 
-
     leagueData =
       league;
 
-
     playersData =
       players;
-
 
     allPlayers =
       Object.values(
@@ -1469,11 +1546,6 @@ async function loadLeague() {
           player &&
           player.full_name
       );
-
-
-    /*
-     * Build team data
-     */
 
     teamsData =
       rosters.map(
@@ -1486,13 +1558,11 @@ async function loadLeague() {
                 roster.owner_id
             );
 
-
           const teamName =
             user?.metadata?.team_name ||
             user?.display_name ||
             "Team " +
             roster.roster_id;
-
 
           return {
 
@@ -1529,34 +1599,23 @@ async function loadLeague() {
         }
       );
 
-
     teamsData.sort(
       (a,b) =>
         a.roster.roster_id -
         b.roster.roster_id
     );
 
-
-    /*
-     * Load FantasyCalc AFTER
-     * teams and league settings
-     * are available.
-     */
-
     await loadFantasyCalcValues();
-
 
     document.getElementById(
       "connectionStatus"
     ).innerHTML =
       "🟢 Connected to Sleeper";
 
-
     document.getElementById(
       "connectionStatus"
     ).className =
       "connection connected";
-
 
     populateTeamSelectors();
 
@@ -1566,16 +1625,13 @@ async function loadLeague() {
 
     loadPowerRankings();
 
-
     const params =
       new URLSearchParams(
         window.location.search
       );
 
-
     const urlTeam =
       params.get("team");
-
 
     if (
       urlTeam &&
@@ -1602,12 +1658,10 @@ async function loadLeague() {
 
     }
 
-
     document.getElementById(
       "teamSelector"
     ).value =
       selectedTeamId;
-
 
     renderSelectedTeam();
 
@@ -1615,13 +1669,18 @@ async function loadLeague() {
 
     loadLeagueHistory();
 
+    /*
+     * Automatically load Week 1
+     * into the newsletter when the
+     * league finishes loading.
+     */
+    renderNewsletter();
 
   } catch (error) {
 
     console.error(
       error
     );
-
 
     document.getElementById(
       "connectionStatus"
@@ -1631,7 +1690,6 @@ async function loadLeague() {
         error.message
       ) +
       "</small>";
-
 
     document.getElementById(
       "connectionStatus"
@@ -1654,10 +1712,8 @@ function populateTeamSelectors() {
       "teamSelector"
     );
 
-
   selector.innerHTML =
     "";
-
 
   teamsData.forEach(
     team => {
@@ -1667,16 +1723,13 @@ function populateTeamSelectors() {
           "option"
         );
 
-
       option.value =
         team.roster.roster_id;
-
 
       option.textContent =
         team.teamName +
         " — " +
         team.manager;
-
 
       selector.appendChild(
         option
@@ -1685,26 +1738,21 @@ function populateTeamSelectors() {
     }
   );
 
-
   const tradeA =
     document.getElementById(
       "tradeTeamA"
     );
-
 
   const tradeB =
     document.getElementById(
       "tradeTeamB"
     );
 
-
   tradeA.innerHTML =
     '<option value="">Select Team</option>';
 
-
   tradeB.innerHTML =
     '<option value="">Select Team</option>';
-
 
   teamsData.forEach(
     team => {
@@ -1714,33 +1762,26 @@ function populateTeamSelectors() {
           "option"
         );
 
-
       optionA.value =
         team.roster.roster_id;
-
 
       optionA.textContent =
         team.teamName;
 
-
       tradeA.appendChild(
         optionA
       );
-
 
       const optionB =
         document.createElement(
           "option"
         );
 
-
       optionB.value =
         team.roster.roster_id;
 
-
       optionB.textContent =
         team.teamName;
-
 
       tradeB.appendChild(
         optionB
@@ -1761,25 +1802,21 @@ function selectTeam(id) {
   selectedTeamId =
     Number(id);
 
-
   const url =
     new URL(
       window.location.href
     );
-
 
   url.searchParams.set(
     "team",
     selectedTeamId
   );
 
-
   window.history.replaceState(
     {},
     "",
     url
   );
-
 
   renderSelectedTeam();
 
@@ -1799,9 +1836,7 @@ function renderSelectedTeam() {
         Number(selectedTeamId)
     );
 
-
   if (!team) return;
-
 
   document.getElementById(
     "teamDashboard"
@@ -1848,7 +1883,6 @@ function renderSelectedTeam() {
 
       </div>
 
-
       <div class="stat-card">
 
         <div class="label">
@@ -1863,7 +1897,6 @@ function renderSelectedTeam() {
 
       </div>
 
-
       <div class="stat-card">
 
         <div class="label">
@@ -1877,7 +1910,6 @@ function renderSelectedTeam() {
         </div>
 
       </div>
-
 
       <div class="stat-card">
 
@@ -1896,7 +1928,6 @@ function renderSelectedTeam() {
     </div>
 
   `;
-
 
   renderMatchup(team);
 
@@ -1937,7 +1968,6 @@ function getLeagueRank(
       }
     );
 
-
   return (
     sorted.findIndex(
       t =>
@@ -1962,14 +1992,12 @@ async function renderMatchup(
       "matchup"
     );
 
-
   try {
 
     const week =
       leagueData?.settings?.leg ||
       leagueData?.settings?.current_week ||
       1;
-
 
     const matchups =
       await sleeper(
@@ -1979,14 +2007,12 @@ async function renderMatchup(
         week
       );
 
-
     const teamMatchup =
       matchups.find(
         m =>
           m.roster_id ===
           team.roster.roster_id
       );
-
 
     if (!teamMatchup) {
 
@@ -1997,7 +2023,6 @@ async function renderMatchup(
 
     }
 
-
     const opponentMatchup =
       matchups.find(
         m =>
@@ -2006,7 +2031,6 @@ async function renderMatchup(
           m.roster_id !==
           team.roster.roster_id
       );
-
 
     if (!opponentMatchup) {
 
@@ -2017,7 +2041,6 @@ async function renderMatchup(
 
     }
 
-
     const opponent =
       teamsData.find(
         t =>
@@ -2025,13 +2048,11 @@ async function renderMatchup(
           opponentMatchup.roster_id
       );
 
-
     const teamPoints =
       Number(
         teamMatchup.points ||
         0
       );
-
 
     const opponentPoints =
       Number(
@@ -2039,10 +2060,8 @@ async function renderMatchup(
         0
       );
 
-
     let result =
       "Tied";
-
 
     if (
       teamPoints >
@@ -2054,7 +2073,6 @@ async function renderMatchup(
 
     }
 
-
     if (
       teamPoints <
       opponentPoints
@@ -2064,7 +2082,6 @@ async function renderMatchup(
         "Losing";
 
     }
-
 
     matchupContainer.innerHTML = `
 
@@ -2077,7 +2094,6 @@ async function renderMatchup(
       >
         Week ${week}
       </div>
-
 
       <div class="matchup">
 
@@ -2095,11 +2111,9 @@ async function renderMatchup(
 
         </div>
 
-
         <div class="vs">
           VS
         </div>
-
 
         <div class="matchup-team">
 
@@ -2118,13 +2132,11 @@ async function renderMatchup(
 
       </div>
 
-
       <div class="result">
         ${result}
       </div>
 
     `;
-
 
   } catch (error) {
 
@@ -2132,9 +2144,1464 @@ async function renderMatchup(
       error
     );
 
-
     matchupContainer.innerHTML =
       "<div class='empty'>Unable to load matchup.</div>";
+
+  }
+
+}
+
+
+/* =========================================================
+   WEEKLY NEWSLETTER
+========================================================= */
+
+/*
+ * IMPORTANT:
+ *
+ * This section intentionally does NOT use
+ * leagueData.settings.current_week.
+ *
+ * Historical newsletter weeks always call:
+ *
+ * /matchups/1
+ * /matchups/2
+ *
+ * This prevents the current-week setting from
+ * accidentally assigning a score to the wrong team.
+ */
+
+
+/* =========================================================
+   GET HISTORICAL WEEK MATCHUPS
+========================================================= */
+
+async function getWeekMatchups(
+  week
+) {
+
+  return await sleeper(
+    "/league/" +
+    LEAGUE_ID +
+    "/matchups/" +
+    Number(week)
+  );
+
+}
+
+
+/* =========================================================
+   FIND TEAM BY ROSTER ID
+========================================================= */
+
+function getTeamByRosterId(
+  rosterId
+) {
+
+  return teamsData.find(
+    team =>
+      Number(
+        team.roster.roster_id
+      ) ===
+      Number(rosterId)
+  );
+
+}
+
+
+/* =========================================================
+   BUILD MATCHUPS
+========================================================= */
+
+function buildNewsletterMatchups(
+  matchups
+) {
+
+  const grouped = {};
+
+  matchups.forEach(
+    matchup => {
+
+      if (
+        matchup.matchup_id == null
+      ) {
+
+        return;
+
+      }
+
+      const matchupId =
+        String(
+          matchup.matchup_id
+        );
+
+      if (
+        !grouped[matchupId]
+      ) {
+
+        grouped[matchupId] = [];
+
+      }
+
+      grouped[matchupId].push(
+        matchup
+      );
+
+    }
+  );
+
+
+  const games = [];
+
+
+  Object.entries(
+    grouped
+  ).forEach(
+    (
+      [matchupId, rows]
+    ) => {
+
+      if (
+        rows.length < 2
+      ) {
+
+        return;
+
+      }
+
+      /*
+       * Sort by roster_id only for
+       * predictable rendering.
+       *
+       * The actual team/score mapping
+       * remains attached to each row.
+       */
+
+      rows.sort(
+        (a,b) =>
+          Number(a.roster_id) -
+          Number(b.roster_id)
+      );
+
+
+      const rowA =
+        rows[0];
+
+      const rowB =
+        rows[1];
+
+
+      const teamA =
+        getTeamByRosterId(
+          rowA.roster_id
+        );
+
+      const teamB =
+        getTeamByRosterId(
+          rowB.roster_id
+        );
+
+
+      /*
+       * If a roster cannot be mapped,
+       * do not create a potentially
+       * incorrect matchup.
+       */
+
+      if (
+        !teamA ||
+        !teamB
+      ) {
+
+        return;
+
+      }
+
+
+      const scoreA =
+        Number(
+          rowA.points ?? 0
+        );
+
+
+      const scoreB =
+        Number(
+          rowB.points ?? 0
+        );
+
+
+      let winner =
+        "tie";
+
+
+      if (
+        scoreA >
+        scoreB
+      ) {
+
+        winner =
+          "a";
+
+      }
+
+      else if (
+        scoreB >
+        scoreA
+      ) {
+
+        winner =
+          "b";
+
+      }
+
+
+      games.push({
+
+        matchupId,
+
+        a: {
+
+          rosterId:
+            rowA.roster_id,
+
+          team:
+            teamA,
+
+          score:
+            scoreA,
+
+          matchup:
+            rowA
+
+        },
+
+        b: {
+
+          rosterId:
+            rowB.roster_id,
+
+          team:
+            teamB,
+
+          score:
+            scoreB,
+
+          matchup:
+            rowB
+
+        },
+
+        winner,
+
+        margin:
+          Math.abs(
+            scoreA -
+            scoreB
+          )
+
+      });
+
+    }
+  );
+
+
+  return games.sort(
+    (a,b) =>
+      Number(
+        a.a.rosterId
+      ) -
+      Number(
+        b.a.rosterId
+      )
+  );
+
+}
+
+
+/* =========================================================
+   BENCH POINTS
+========================================================= */
+
+function getBenchPoints(
+  matchup
+) {
+
+  if (!matchup) {
+
+    return 0;
+
+  }
+
+
+  const playersPoints =
+    matchup.players_points ||
+    {};
+
+
+  const starters =
+    new Set(
+      matchup.starters ||
+      []
+    );
+
+
+  let benchPoints = 0;
+
+
+  Object.entries(
+    playersPoints
+  ).forEach(
+    (
+      [playerId, points]
+    ) => {
+
+      if (
+        !starters.has(
+          playerId
+        )
+      ) {
+
+        benchPoints +=
+          Number(
+            points || 0
+          );
+
+      }
+
+    }
+  );
+
+
+  return benchPoints;
+
+}
+
+
+/* =========================================================
+   GET WEEKLY TEAM RECORD
+========================================================= */
+
+function getWeeklyTeamRecord(
+  team,
+  games
+) {
+
+  const rosterId =
+    Number(
+      team.roster.roster_id
+    );
+
+
+  const game =
+    games.find(
+      g =>
+        Number(
+          g.a.rosterId
+        ) === rosterId ||
+        Number(
+          g.b.rosterId
+        ) === rosterId
+    );
+
+
+  if (!game) {
+
+    return null;
+
+  }
+
+
+  const isA =
+    Number(
+      game.a.rosterId
+    ) === rosterId;
+
+
+  const current =
+    isA
+      ? game.a
+      : game.b;
+
+
+  const opponent =
+    isA
+      ? game.b
+      : game.a;
+
+
+  let result =
+    "Tie";
+
+
+  if (
+    current.score >
+    opponent.score
+  ) {
+
+    result =
+      "Win";
+
+  }
+
+  else if (
+    current.score <
+    opponent.score
+  ) {
+
+    result =
+      "Loss";
+
+  }
+
+
+  return {
+
+    team,
+
+    opponent:
+      opponent.team,
+
+    score:
+      current.score,
+
+    opponentScore:
+      opponent.score,
+
+    result,
+
+    margin:
+      game.margin,
+
+    benchPoints:
+      getBenchPoints(
+        current.matchup
+      ),
+
+    matchup:
+      current.matchup
+
+  };
+
+}
+
+
+/* =========================================================
+   CALCULATE NEWSLETTER AWARDS
+========================================================= */
+
+function calculateNewsletterAwards(
+  games
+) {
+
+  if (
+    games.length === 0
+  ) {
+
+    return {};
+
+  }
+
+
+  const allTeams =
+    [];
+
+
+  games.forEach(
+    game => {
+
+      allTeams.push(
+        {
+          ...game.a,
+          game
+        }
+      );
+
+      allTeams.push(
+        {
+          ...game.b,
+          game
+        }
+      );
+
+    }
+  );
+
+
+  const highScore =
+    [...allTeams].sort(
+      (a,b) =>
+        b.score -
+        a.score
+    )[0];
+
+
+  const lowScore =
+    [...allTeams].sort(
+      (a,b) =>
+        a.score -
+        b.score
+    )[0];
+
+
+  const winningGames =
+    games.filter(
+      game =>
+        game.winner !==
+        "tie"
+    );
+
+
+  const closeCall =
+    winningGames.length > 0
+      ? [...winningGames].sort(
+          (a,b) =>
+            a.margin -
+            b.margin
+        )[0]
+      : null;
+
+
+  const blowout =
+    winningGames.length > 0
+      ? [...winningGames].sort(
+          (a,b) =>
+            b.margin -
+            a.margin
+        )[0]
+      : null;
+
+
+  const benchTeams =
+    allTeams.map(
+      entry => ({
+        ...entry,
+        benchPoints:
+          getBenchPoints(
+            entry.matchup
+          )
+      })
+    );
+
+
+  const benchCrime =
+    [...benchTeams].sort(
+      (a,b) =>
+        b.benchPoints -
+        a.benchPoints
+    )[0];
+
+
+  const highestOpponent =
+    [...allTeams].sort(
+      (a,b) => {
+
+        const aOpponent =
+          a.game
+            ? (
+                Number(
+                  a.game.a.rosterId
+                ) ===
+                Number(
+                  a.rosterId
+                )
+                  ? a.game.b.score
+                  : a.game.a.score
+              )
+            : 0;
+
+
+        const bOpponent =
+          b.game
+            ? (
+                Number(
+                  b.game.a.rosterId
+                ) ===
+                Number(
+                  b.rosterId
+                )
+                  ? b.game.b.score
+                  : b.game.a.score
+              )
+            : 0;
+
+
+        return (
+          bOpponent -
+          aOpponent
+        );
+
+      }
+    )[0];
+
+
+  const lowestOpponent =
+    [...allTeams].sort(
+      (a,b) => {
+
+        const aOpponent =
+          a.game
+            ? (
+                Number(
+                  a.game.a.rosterId
+                ) ===
+                Number(
+                  a.rosterId
+                )
+                  ? a.game.b.score
+                  : a.game.a.score
+              )
+            : 0;
+
+
+        const bOpponent =
+          b.game
+            ? (
+                Number(
+                  b.game.a.rosterId
+                ) ===
+                Number(
+                  b.rosterId
+                )
+                  ? b.game.b.score
+                  : b.game.a.score
+              )
+            : 0;
+
+
+        return (
+          aOpponent -
+          bOpponent
+        );
+
+      }
+    )[0];
+
+
+  return {
+
+    highScore,
+
+    lowScore,
+
+    closeCall,
+
+    blowout,
+
+    benchCrime,
+
+    highPA:
+      highestOpponent,
+
+    lowPA:
+      lowestOpponent
+
+  };
+
+}
+
+
+/* =========================================================
+   AUTOMATIC TEAM COMMENTARY
+========================================================= */
+
+function generateTeamCommentary(
+  team,
+  weekly,
+  awards
+) {
+
+  if (!weekly) {
+
+    return (
+      "No matchup information was available " +
+      "for this team during the selected week."
+    );
+
+  }
+
+
+  const teamName =
+    team.teamName;
+
+
+  const opponentName =
+    weekly.opponent?.teamName ||
+    "their opponent";
+
+
+  const score =
+    weekly.score;
+
+
+  const opponentScore =
+    weekly.opponentScore;
+
+
+  const margin =
+    weekly.margin;
+
+
+  const isHighScore =
+    awards.highScore &&
+    Number(
+      awards.highScore.rosterId
+    ) ===
+    Number(
+      team.roster.roster_id
+    );
+
+
+  const isLowScore =
+    awards.lowScore &&
+    Number(
+      awards.lowScore.rosterId
+    ) ===
+    Number(
+      team.roster.roster_id
+    );
+
+
+  const isBenchCrime =
+    awards.benchCrime &&
+    Number(
+      awards.benchCrime.rosterId
+    ) ===
+    Number(
+      team.roster.roster_id
+    );
+
+
+  const isHighPA =
+    awards.highPA &&
+    Number(
+      awards.highPA.rosterId
+    ) ===
+    Number(
+      team.roster.roster_id
+    );
+
+
+  const sentences =
+    [];
+
+
+  if (
+    weekly.result ===
+    "Win"
+  ) {
+
+    if (
+      margin <= 5
+    ) {
+
+      sentences.push(
+        `${teamName} survived a nail-biter against ${opponentName}, winning ${score.toFixed(2)}-${opponentScore.toFixed(2)}.`
+      );
+
+    }
+
+    else if (
+      margin >= 30
+    ) {
+
+      sentences.push(
+        `${teamName} dominated ${opponentName}, cruising to a ${score.toFixed(2)}-${opponentScore.toFixed(2)} victory.`
+      );
+
+    }
+
+    else {
+
+      sentences.push(
+        `${teamName} picked up the win over ${opponentName}, finishing with ${score.toFixed(2)} points.`
+      );
+
+    }
+
+  }
+
+  else if (
+    weekly.result ===
+    "Loss"
+  ) {
+
+    if (
+      margin <= 5
+    ) {
+
+      sentences.push(
+        `${teamName} came painfully close against ${opponentName}, falling ${score.toFixed(2)}-${opponentScore.toFixed(2)}.`
+      );
+
+    }
+
+    else {
+
+      sentences.push(
+        `${teamName} dropped its matchup against ${opponentName}, scoring ${score.toFixed(2)} points.`
+      );
+
+    }
+
+  }
+
+  else {
+
+    sentences.push(
+      `${teamName} and ${opponentName} finished in a tie at ${score.toFixed(2)} points.`
+    );
+
+  }
+
+
+  if (
+    isHighScore
+  ) {
+
+    sentences.push(
+      `The big positive: ${teamName} posted the highest score of the week.`
+    );
+
+  }
+
+  else if (
+    isLowScore
+  ) {
+
+    sentences.push(
+      `It was a quiet week offensively, as ${teamName} posted the lowest score in the league.`
+    );
+
+  }
+
+  else if (
+    isBenchCrime &&
+    weekly.benchPoints >= 20
+  ) {
+
+    sentences.push(
+      `${teamName} also left ${weekly.benchPoints.toFixed(2)} points on the bench, which could have made this matchup even more interesting.`
+    );
+
+  }
+
+  else if (
+    isHighPA
+  ) {
+
+    sentences.push(
+      `${teamName} had the unfortunate task of facing the highest-scoring opponent of the week.`
+    );
+
+  }
+
+
+  if (
+    sentences.length <
+    2
+  ) {
+
+    if (
+      weekly.benchPoints >= 20
+    ) {
+
+      sentences.push(
+        `${teamName} left ${weekly.benchPoints.toFixed(2)} points on the bench.`
+      );
+
+    }
+
+    else if (
+      margin < 10
+    ) {
+
+      sentences.push(
+        `The matchup stayed competitive all the way through the final score.`
+      );
+
+    }
+
+    else {
+
+      sentences.push(
+        `${teamName} finished the week with a ${margin.toFixed(2)}-point margin.`
+      );
+
+    }
+
+  }
+
+
+  return sentences
+    .slice(0, 2)
+    .join(" ");
+
+}
+
+
+/* =========================================================
+   NEWSLETTER AWARD CARD
+========================================================= */
+
+function newsletterAwardCard(
+  title,
+  winner,
+  stat,
+  commentary
+) {
+
+  if (!winner) {
+
+    return "";
+
+  }
+
+
+  return `
+
+    <div class="newsletter-award">
+
+      <h3>
+        ${escapeHtml(title)}
+      </h3>
+
+      <div class="award-winner">
+        ${escapeHtml(
+          winner.team.teamName
+        )}
+      </div>
+
+      <div class="award-stat">
+        ${escapeHtml(stat)}
+      </div>
+
+      <p>
+        ${escapeHtml(
+          commentary
+        )}
+      </p>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   RENDER NEWSLETTER
+========================================================= */
+
+async function renderNewsletter() {
+
+  const container =
+    document.getElementById(
+      "newsletter"
+    );
+
+
+  const weekSelect =
+    document.getElementById(
+      "newsletterWeek"
+    );
+
+
+  const week =
+    Number(
+      weekSelect?.value ||
+      1
+    );
+
+
+  if (
+    teamsData.length === 0
+  ) {
+
+    container.innerHTML = `
+
+      <div class="newsletter-loading">
+        Waiting for league data...
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div class="newsletter-loading">
+      Loading Week ${week} newsletter directly from Sleeper...
+    </div>
+
+  `;
+
+
+  try {
+
+    /*
+     * Explicit historical request.
+     *
+     * For Week 1 this is:
+     *
+     * /matchups/1
+     *
+     * For Week 2:
+     *
+     * /matchups/2
+     */
+
+    const matchups =
+      await getWeekMatchups(
+        week
+      );
+
+
+    if (
+      !Array.isArray(matchups) ||
+      matchups.length === 0
+    ) {
+
+      throw new Error(
+        "Sleeper returned no matchup data for Week " +
+        week +
+        "."
+      );
+
+    }
+
+
+    const games =
+      buildNewsletterMatchups(
+        matchups
+      );
+
+
+    if (
+      games.length === 0
+    ) {
+
+      throw new Error(
+        "No completed matchups could be built for Week " +
+        week +
+        "."
+      );
+
+    }
+
+
+    const awards =
+      calculateNewsletterAwards(
+        games
+      );
+
+
+    /*
+     * Build award winners.
+     *
+     * Each award winner is kept
+     * attached to its actual roster_id.
+     */
+
+    const highScore =
+      awards.highScore;
+
+
+    const lowScore =
+      awards.lowScore;
+
+
+    let closeWinner =
+      null;
+
+
+    if (
+      awards.closeCall
+    ) {
+
+      closeWinner =
+        awards.closeCall.winner === "a"
+          ? awards.closeCall.a
+          : awards.closeCall.b;
+
+    }
+
+
+    let blowoutWinner =
+      null;
+
+
+    if (
+      awards.blowout
+    ) {
+
+      blowoutWinner =
+        awards.blowout.winner === "a"
+          ? awards.blowout.a
+          : awards.blowout.b;
+
+    }
+
+
+    const benchCrime =
+      awards.benchCrime;
+
+
+    const highPA =
+      awards.highPA;
+
+
+    const lowPA =
+      awards.lowPA;
+
+
+    let closeCommentary =
+      "";
+
+
+    if (
+      awards.closeCall
+    ) {
+
+      closeCommentary =
+        `${closeWinner.team.teamName} escaped with a ${awards.closeCall.margin.toFixed(2)}-point victory.`;
+
+    }
+
+
+    let blowoutCommentary =
+      "";
+
+
+    if (
+      awards.blowout
+    ) {
+
+      blowoutCommentary =
+        `${blowoutWinner.team.teamName} delivered the largest margin of victory at ${awards.blowout.margin.toFixed(2)} points.`;
+
+    }
+
+
+    let highPACommentary =
+      "";
+
+
+    if (
+      highPA
+    ) {
+
+      const opponentScore =
+        Number(
+          highPA.game.a.rosterId
+        ) ===
+        Number(
+          highPA.rosterId
+        )
+          ? highPA.game.b.score
+          : highPA.game.a.score;
+
+
+      highPACommentary =
+        `${highPA.team.teamName} faced ${opponentScore.toFixed(2)} points from its opponent.`;
+
+    }
+
+
+    let lowPACommentary =
+      "";
+
+
+    if (
+      lowPA
+    ) {
+
+      const opponentScore =
+        Number(
+          lowPA.game.a.rosterId
+        ) ===
+        Number(
+          lowPA.rosterId
+        )
+          ? lowPA.game.b.score
+          : lowPA.game.a.score;
+
+
+      lowPACommentary =
+        `${lowPA.team.teamName} had the lowest opponent score of the week at ${opponentScore.toFixed(2)} points.`;
+
+    }
+
+
+    /*
+     * Automatically create weekly records
+     * for every team.
+     */
+
+    const weeklyTeams =
+      teamsData
+        .map(
+          team =>
+            getWeeklyTeamRecord(
+              team,
+              games
+            )
+        )
+        .filter(
+          Boolean
+        );
+
+
+    /*
+     * Newsletter header
+     */
+
+    let html = `
+
+      <div class="newsletter-header">
+
+        <h2>
+          📰 Noke Football — Week ${week}
+        </h2>
+
+        <p>
+          Automatically generated from Sleeper matchup data.
+        </p>
+
+      </div>
+
+
+      <h3>
+        🏅 Weekly Awards
+      </h3>
+
+      <div class="newsletter-awards">
+
+    `;
+
+
+    html += newsletterAwardCard(
+      "🔥 Highest Score",
+      highScore,
+      highScore
+        ? `${highScore.score.toFixed(2)} points`
+        : "",
+      highScore
+        ? `${highScore.team.teamName} led the league in scoring this week.`
+        : ""
+    );
+
+
+    html += newsletterAwardCard(
+      "🥶 Lowest Score",
+      lowScore,
+      lowScore
+        ? `${lowScore.score.toFixed(2)} points`
+        : "",
+      lowScore
+        ? `${lowScore.team.teamName} had the lowest total score of the week.`
+        : ""
+    );
+
+
+    html += newsletterAwardCard(
+      "😰 Closest Game",
+      closeWinner,
+      awards.closeCall
+        ? `${awards.closeCall.margin.toFixed(2)}-point margin`
+        : "",
+      closeCommentary
+    );
+
+
+    html += newsletterAwardCard(
+      "💥 Biggest Blowout",
+      blowoutWinner,
+      awards.blowout
+        ? `${awards.blowout.margin.toFixed(2)}-point margin`
+        : "",
+      blowoutCommentary
+    );
+
+
+    html += newsletterAwardCard(
+      "🪑 Bench Crime",
+      benchCrime,
+      benchCrime
+        ? `${benchCrime.benchPoints.toFixed(2)} points left on bench`
+        : "",
+      benchCrime
+        ? `${benchCrime.team.teamName} had the most points sitting on the bench this week.`
+        : ""
+    );
+
+
+    html += newsletterAwardCard(
+      "😵 Toughest Opponent",
+      highPA,
+      highPA
+        ? "Highest opponent score faced"
+        : "",
+      highPACommentary
+    );
+
+
+    html += newsletterAwardCard(
+      "😌 Easiest Opponent",
+      lowPA,
+      lowPA
+        ? "Lowest opponent score faced"
+        : "",
+      lowPACommentary
+    );
+
+
+    html += `
+
+      </div>
+
+      <h3>
+        🏈 Team-by-Team Recap
+      </h3>
+
+      <div class="newsletter-teams">
+
+    `;
+
+
+    /*
+     * Every team gets an automatically
+     * generated write-up.
+     */
+
+    weeklyTeams.forEach(
+      weekly => {
+
+        const team =
+          weekly.team;
+
+
+        const commentary =
+          generateTeamCommentary(
+            team,
+            weekly,
+            awards
+          );
+
+
+        html += `
+
+          <div class="newsletter-team">
+
+            <h3>
+              ${escapeHtml(
+                team.teamName
+              )}
+            </h3>
+
+            <div class="manager">
+
+              Manager:
+              ${escapeHtml(
+                team.manager
+              )}
+
+            </div>
+
+            <div class="team-record">
+
+              Week ${week}:
+              ${escapeHtml(
+                weekly.result
+              )}
+
+            </div>
+
+            <div class="team-score">
+
+              <strong>
+                ${weekly.score.toFixed(2)}
+              </strong>
+
+              &nbsp;–&nbsp;
+
+              ${weekly.opponentScore.toFixed(2)}
+
+            </div>
+
+            <p>
+              ${escapeHtml(
+                commentary
+              )}
+            </p>
+
+            <div class="newsletter-matchup">
+
+              vs.
+              <strong>
+                ${escapeHtml(
+                  weekly.opponent.teamName
+                )}
+              </strong>
+
+              <br>
+
+              Margin:
+              ${weekly.margin.toFixed(2)}
+
+              <br>
+
+              Bench:
+              ${weekly.benchPoints.toFixed(2)}
+
+            </div>
+
+          </div>
+
+        `;
+
+      }
+    );
+
+
+    html += `
+
+      </div>
+
+    `;
+
+
+    container.innerHTML =
+      html;
+
+
+  } catch (error) {
+
+    console.error(
+      "Newsletter error:",
+      error
+    );
+
+
+    container.innerHTML = `
+
+      <div class="newsletter-error">
+
+        <strong>
+          Couldn't load Week ${week} newsletter.
+        </strong>
+
+        <br><br>
+
+        ${escapeHtml(
+          error.message
+        )}
+
+      </div>
+
+    `;
 
   }
 
@@ -2152,33 +3619,27 @@ function renderRoster(
   const roster =
     team.roster;
 
-
   const starters =
     roster.starters ||
     [];
-
 
   const players =
     roster.players ||
     [];
 
-
   const reserve =
     roster.reserve ||
     [];
-
 
   const starterIds =
     new Set(
       starters
     );
 
-
   const reserveIds =
     new Set(
       reserve
     );
-
 
   const bench =
     players.filter(
@@ -2186,7 +3647,6 @@ function renderRoster(
         !starterIds.has(id) &&
         !reserveIds.has(id)
     );
-
 
   document.getElementById(
     "roster"
@@ -2206,7 +3666,6 @@ function renderRoster(
 
       </div>
 
-
       <div class="roster-box">
 
         <h3>
@@ -2218,7 +3677,6 @@ function renderRoster(
         )}
 
       </div>
-
 
       <div class="roster-box">
 
@@ -2260,13 +3718,11 @@ function renderRosterPlayers(
 
   }
 
-
   return ids.map(
     id => {
 
       const player =
         playersData[id];
-
 
       if (!player) {
 
@@ -2278,7 +3734,6 @@ function renderRosterPlayers(
 
       }
 
-
       const name =
         player.full_name ||
         (
@@ -2286,7 +3741,6 @@ function renderRosterPlayers(
           " " +
           (player.last_name || "")
         ).trim();
-
 
       return `
 
@@ -2304,7 +3758,6 @@ function renderRosterPlayers(
               )}
 
             </div>
-
 
             <div class="player-meta">
 
@@ -2364,12 +3817,10 @@ function searchPlayers() {
       .trim()
       .toLowerCase();
 
-
   const results =
     document.getElementById(
       "playerSearchResults"
     );
-
 
   if (!query) {
 
@@ -2379,7 +3830,6 @@ function searchPlayers() {
     return;
 
   }
-
 
   const matches =
     allPlayers
@@ -2392,13 +3842,11 @@ function searchPlayers() {
               ""
             ).toLowerCase();
 
-
           const nflTeam =
             (
               player.team ||
               ""
             ).toLowerCase();
-
 
           return (
             name.includes(query) ||
@@ -2412,7 +3860,6 @@ function searchPlayers() {
         15
       );
 
-
   if (
     matches.length === 0
   ) {
@@ -2424,7 +3871,6 @@ function searchPlayers() {
 
   }
 
-
   results.innerHTML =
     matches.map(
       player => {
@@ -2433,12 +3879,10 @@ function searchPlayers() {
           player.full_name ||
           "Unknown";
 
-
         const positionalRank =
           getPositionalRank(
             player
           );
-
 
         return `
 
@@ -2454,7 +3898,6 @@ function searchPlayers() {
                   name
                 )}
               </strong>
-
 
               <div class="player-meta">
 
@@ -2512,10 +3955,8 @@ function getPositionalRank(
 
   }
 
-
   const position =
     player.position;
-
 
   const positionPlayers =
     allPlayers
@@ -2543,14 +3984,12 @@ function getPositionalRank(
           )
       );
 
-
   const index =
     positionPlayers.findIndex(
       p =>
         p.player_id ===
         player.player_id
     );
-
 
   if (
     index === -1
@@ -2559,7 +3998,6 @@ function getPositionalRank(
     return "—";
 
   }
-
 
   return (
     position +
@@ -2581,7 +4019,6 @@ function showPlayerInfoById(
   const player =
     playersData[id];
 
-
   if (player) {
 
     showPlayerInfo(
@@ -2602,7 +4039,6 @@ function showPlayerInfo(
       "playerInfoContainer"
     );
 
-
   const name =
     player.full_name ||
     (
@@ -2610,7 +4046,6 @@ function showPlayerInfo(
       " " +
       (player.last_name || "")
     ).trim();
-
 
   const fantasyPositions =
     Array.isArray(
@@ -2621,12 +4056,10 @@ function showPlayerInfo(
         )
       : "";
 
-
   const tradeValue =
     calculateTradeValue(
       player
     );
-
 
   container.innerHTML = `
 
@@ -2644,7 +4077,6 @@ function showPlayerInfo(
           name
         )}
       </h3>
-
 
       <div class="player-info">
 
@@ -2732,7 +4164,6 @@ function showPlayerInfo(
 
       </div>
 
-
       <div
         style="
           margin-top:15px;
@@ -2805,13 +4236,11 @@ function setupTradeCalculator() {
       .roster_id ||
     null;
 
-
   tradeTeamBId =
     teamsData[1]
       ?.roster
       .roster_id ||
     null;
-
 
   if (tradeTeamAId) {
 
@@ -2822,7 +4251,6 @@ function setupTradeCalculator() {
 
   }
 
-
   if (tradeTeamBId) {
 
     document.getElementById(
@@ -2831,7 +4259,6 @@ function setupTradeCalculator() {
       tradeTeamBId;
 
   }
-
 
   changeTradeTeam(
     "A"
@@ -2859,12 +4286,10 @@ function changeTradeTeam(
         : "tradeTeamB"
     );
 
-
   const id =
     Number(
       selector.value
     );
-
 
   if (
     side === "A"
@@ -2874,16 +4299,13 @@ function changeTradeTeam(
       id ||
       null;
 
-
     tradeSideA =
       [];
-
 
     document.getElementById(
       "tradeSearchA"
     ).value =
       "";
-
 
     document.getElementById(
       "tradeSearchResultsA"
@@ -2898,16 +4320,13 @@ function changeTradeTeam(
       id ||
       null;
 
-
     tradeSideB =
       [];
-
 
     document.getElementById(
       "tradeSearchB"
     ).value =
       "";
-
 
     document.getElementById(
       "tradeSearchResultsB"
@@ -2915,7 +4334,6 @@ function changeTradeTeam(
       "";
 
   }
-
 
   updateTradeTeamNames();
 
@@ -2945,7 +4363,6 @@ function updateTradeTeamNames() {
         tradeTeamAId
     );
 
-
   const teamB =
     teamsData.find(
       t =>
@@ -2953,13 +4370,11 @@ function updateTradeTeamNames() {
         tradeTeamBId
     );
 
-
   document.getElementById(
     "tradeTeamAName"
   ).textContent =
     teamA?.teamName ||
     "Team A";
-
 
   document.getElementById(
     "tradeTeamBName"
@@ -2983,7 +4398,6 @@ function getTradeTeam(
       ? tradeTeamAId
       : tradeTeamBId;
 
-
   return teamsData.find(
     t =>
       t.roster.roster_id ===
@@ -3006,7 +4420,6 @@ function searchTradePlayers(
       side
     );
 
-
   const results =
     document.getElementById(
       side === "A"
@@ -3014,14 +4427,12 @@ function searchTradePlayers(
         : "tradeSearchResultsB"
     );
 
-
   const input =
     document.getElementById(
       side === "A"
         ? "tradeSearchA"
         : "tradeSearchB"
     );
-
 
   if (!team) {
 
@@ -3032,12 +4443,10 @@ function searchTradePlayers(
 
   }
 
-
   const query =
     input.value
       .trim()
       .toLowerCase();
-
 
   if (!query) {
 
@@ -3047,7 +4456,6 @@ function searchTradePlayers(
     return;
 
   }
-
 
   const rosterPlayers =
     (
@@ -3062,7 +4470,6 @@ function searchTradePlayers(
         Boolean
       );
 
-
   const matches =
     rosterPlayers
       .filter(
@@ -3073,7 +4480,6 @@ function searchTradePlayers(
               player.full_name ||
               ""
             ).toLowerCase();
-
 
           return name.includes(
             query
@@ -3086,7 +4492,6 @@ function searchTradePlayers(
         10
       );
 
-
   if (
     matches.length === 0
   ) {
@@ -3098,7 +4503,6 @@ function searchTradePlayers(
 
   }
 
-
   results.innerHTML =
     matches.map(
       player => {
@@ -3108,12 +4512,10 @@ function searchTradePlayers(
             player
           );
 
-
         const rank =
           getPositionalRank(
             player
           );
-
 
         return `
 
@@ -3129,7 +4531,6 @@ function searchTradePlayers(
                 )}
 
               </div>
-
 
               <div class="player-meta">
 
@@ -3160,7 +4561,6 @@ function searchTradePlayers(
 
             </div>
 
-
             <div>
 
               <span class="trade-value">
@@ -3172,7 +4572,6 @@ function searchTradePlayers(
                 }
 
               </span>
-
 
               <button
                 class="add-btn"
@@ -3205,15 +4604,12 @@ function addTradePlayer(
   const player =
     playersData[playerId];
 
-
   if (!player) return;
-
 
   const list =
     side === "A"
       ? tradeSideA
       : tradeSideB;
-
 
   if (
     list.some(
@@ -3227,19 +4623,15 @@ function addTradePlayer(
 
   }
 
-
   list.push(
     player
   );
-
 
   renderTradePlayers(
     side
   );
 
-
   updateTradeSummary();
-
 
   const input =
     document.getElementById(
@@ -3248,7 +4640,6 @@ function addTradePlayer(
         : "tradeSearchB"
     );
 
-
   const results =
     document.getElementById(
       side === "A"
@@ -3256,10 +4647,8 @@ function addTradePlayer(
         : "tradeSearchResultsB"
     );
 
-
   input.value =
     "";
-
 
   results.innerHTML =
     "";
@@ -3300,11 +4689,9 @@ function removeTradePlayer(
 
   }
 
-
   renderTradePlayers(
     side
   );
-
 
   updateTradeSummary();
 
@@ -3325,18 +4712,15 @@ function calculateTradeValue(
 
   }
 
-
   const playerId =
     String(
       player.player_id
     );
 
-
   const value =
     fantasyCalcValues[
       playerId
     ];
-
 
   if (
     Number.isFinite(
@@ -3349,7 +4733,6 @@ function calculateTradeValue(
     );
 
   }
-
 
   return 0;
 
@@ -3369,14 +4752,12 @@ function renderTradePlayers(
       ? tradeSideA
       : tradeSideB;
 
-
   const container =
     document.getElementById(
       side === "A"
         ? "tradePlayersA"
         : "tradePlayersB"
     );
-
 
   const totalElement =
     document.getElementById(
@@ -3385,7 +4766,6 @@ function renderTradePlayers(
         : "tradeValueB"
     );
 
-
   if (
     list.length === 0
   ) {
@@ -3393,15 +4773,12 @@ function renderTradePlayers(
     container.innerHTML =
       "<div class='empty'>No players added.</div>";
 
-
     totalElement.textContent =
       "0";
-
 
     return;
 
   }
-
 
   container.innerHTML =
     list.map(
@@ -3411,7 +4788,6 @@ function renderTradePlayers(
           calculateTradeValue(
             player
           );
-
 
         return `
 
@@ -3427,7 +4803,6 @@ function renderTradePlayers(
                 )}
 
               </div>
-
 
               <div class="player-meta">
 
@@ -3464,7 +4839,6 @@ function renderTradePlayers(
 
             </div>
 
-
             <div>
 
               <span class="trade-value">
@@ -3476,7 +4850,6 @@ function renderTradePlayers(
                 }
 
               </span>
-
 
               <button
                 class="remove-btn"
@@ -3494,7 +4867,6 @@ function renderTradePlayers(
       }
     ).join("");
 
-
   const total =
     list.reduce(
       (
@@ -3507,7 +4879,6 @@ function renderTradePlayers(
         ),
       0
     );
-
 
   totalElement.textContent =
     total.toLocaleString();
@@ -3531,7 +4902,6 @@ function refreshTradeCalculator() {
 
   }
 
-
   if (
     tradeSideB.length > 0
   ) {
@@ -3541,7 +4911,6 @@ function refreshTradeCalculator() {
     );
 
   }
-
 
   updateTradeSummary();
 
@@ -3567,7 +4936,6 @@ function updateTradeSummary() {
       0
     );
 
-
   const valueB =
     tradeSideB.reduce(
       (
@@ -3581,12 +4949,10 @@ function updateTradeSummary() {
       0
     );
 
-
   const summary =
     document.getElementById(
       "tradeSummary"
     );
-
 
   if (
     tradeSideA.length === 0 &&
@@ -3600,7 +4966,6 @@ function updateTradeSummary() {
 
   }
 
-
   if (
     tradeSideA.length === 0 ||
     tradeSideB.length === 0
@@ -3613,7 +4978,6 @@ function updateTradeSummary() {
 
   }
 
-
   if (
     !fantasyCalcLoaded
   ) {
@@ -3625,16 +4989,13 @@ function updateTradeSummary() {
 
   }
 
-
   const difference =
     Math.abs(
       valueA -
       valueB
     );
 
-
   let text;
-
 
   if (
     valueA >
@@ -3662,7 +5023,6 @@ function updateTradeSummary() {
       "Both sides have the same FantasyCalc market value.";
 
   }
-
 
   summary.innerHTML = `
 
@@ -3750,7 +5110,6 @@ function loadPowerRankings() {
 
   }
 
-
   const maxPoints =
     Math.max(
       ...teamsData.map(
@@ -3762,7 +5121,6 @@ function loadPowerRankings() {
       )
     );
 
-
   const rankings =
     teamsData
       .map(
@@ -3772,7 +5130,6 @@ function loadPowerRankings() {
             team.wins +
             team.losses +
             team.ties;
-
 
           const winPct =
             games > 0
@@ -3788,7 +5145,6 @@ function loadPowerRankings() {
 
               : 0;
 
-
           const pointsRelative =
             maxPoints > 0
 
@@ -3797,13 +5153,11 @@ function loadPowerRankings() {
 
               : 0;
 
-
           const powerScore =
             winPct *
             0.60 +
             pointsRelative *
             0.40;
-
 
           return {
 
@@ -3820,7 +5174,6 @@ function loadPowerRankings() {
           b.powerScore -
           a.powerScore
       );
-
 
   document.getElementById(
     "powerRankings"
@@ -3855,7 +5208,6 @@ function loadPowerRankings() {
         </tr>
 
       </thead>
-
 
       <tbody>
 
@@ -3946,7 +5298,6 @@ function loadStandings() {
       }
     );
 
-
   document.getElementById(
     "standings"
   ).innerHTML = `
@@ -3984,7 +5335,6 @@ function loadStandings() {
         </tr>
 
       </thead>
-
 
       <tbody>
 
@@ -4064,12 +5414,10 @@ async function loadLeagueHistory() {
       "leagueHistory"
     );
 
-
   const championsContainer =
     document.getElementById(
       "pastChampions"
     );
-
 
   try {
 
@@ -4084,7 +5432,6 @@ async function loadLeagueHistory() {
     const visited =
       new Set();
 
-
     while (
       leagueId &&
       !visited.has(
@@ -4096,13 +5443,11 @@ async function loadLeagueHistory() {
         leagueId
       );
 
-
       const league =
         await sleeper(
           "/league/" +
           leagueId
         );
-
 
       const [
         users,
@@ -4131,10 +5476,8 @@ async function loadLeagueHistory() {
 
         ]);
 
-
       const userMap =
         {};
-
 
       users.forEach(
         user => {
@@ -4150,10 +5493,8 @@ async function loadLeagueHistory() {
         }
       );
 
-
       const rosterMap =
         {};
-
 
       rosters.forEach(
         roster => {
@@ -4166,10 +5507,8 @@ async function loadLeagueHistory() {
         }
       );
 
-
       let championship =
         null;
-
 
       if (
         Array.isArray(
@@ -4186,7 +5525,6 @@ async function loadLeagueHistory() {
               game.l != null
           );
 
-
         if (
           completedGames.length > 0
         ) {
@@ -4202,7 +5540,6 @@ async function loadLeagueHistory() {
               )
             );
 
-
           const finalGames =
             completedGames.filter(
               game =>
@@ -4211,7 +5548,6 @@ async function loadLeagueHistory() {
                 ) ===
                 maxRound
             );
-
 
           championship =
             finalGames[
@@ -4223,13 +5559,11 @@ async function loadLeagueHistory() {
 
       }
 
-
       let champion =
         null;
 
       let runnerUp =
         null;
-
 
       if (
         championship
@@ -4240,12 +5574,10 @@ async function loadLeagueHistory() {
             championship.w
           ];
 
-
         const runnerUpRoster =
           rosterMap[
             championship.l
           ];
-
 
         champion = {
 
@@ -4290,7 +5622,6 @@ async function loadLeagueHistory() {
 
         };
 
-
         runnerUp = {
 
           rosterId:
@@ -4312,7 +5643,6 @@ async function loadLeagueHistory() {
 
       }
 
-
       const sortedRosters =
         [...rosters].sort(
           (a,b) => {
@@ -4323,13 +5653,11 @@ async function loadLeagueHistory() {
                 0
               );
 
-
             const bWins =
               Number(
                 b.settings?.wins ||
                 0
               );
-
 
             if (
               bWins !==
@@ -4343,20 +5671,17 @@ async function loadLeagueHistory() {
 
             }
 
-
             const aPoints =
               Number(
                 a.settings?.fpts ||
                 0
               );
 
-
             const bPoints =
               Number(
                 b.settings?.fpts ||
                 0
               );
-
 
             return (
               bPoints -
@@ -4366,14 +5691,11 @@ async function loadLeagueHistory() {
           }
         );
 
-
       const regularSeasonChampion =
         sortedRosters[0];
 
-
       let regularSeasonChampionData =
         null;
-
 
       if (
         regularSeasonChampion
@@ -4423,7 +5745,6 @@ async function loadLeagueHistory() {
 
       }
 
-
       history.push({
 
         season:
@@ -4449,27 +5770,22 @@ async function loadLeagueHistory() {
 
       });
 
-
       leagueId =
         league.previous_league_id ||
         null;
-
 
       isCurrentSeason =
         false;
 
     }
 
-
     renderLeagueHistory(
       history
     );
 
-
     renderPastChampions(
       history
     );
-
 
   } catch (error) {
 
@@ -4477,7 +5793,6 @@ async function loadLeagueHistory() {
       "League history error:",
       error
     );
-
 
     historyContainer.innerHTML = `
 
@@ -4496,7 +5811,6 @@ async function loadLeagueHistory() {
       </div>
 
     `;
-
 
     championsContainer.innerHTML = `
 
@@ -4526,7 +5840,6 @@ function renderLeagueHistory(
       "leagueHistory"
     );
 
-
   if (
     !history ||
     history.length === 0
@@ -4544,7 +5857,6 @@ function renderLeagueHistory(
 
   }
 
-
   container.innerHTML =
     history.map(
       record => {
@@ -4552,16 +5864,13 @@ function renderLeagueHistory(
         const hasChampion =
           !!record.champion;
 
-
         const championName =
           record.champion?.name ||
           "Championship not completed";
 
-
         const runnerUpName =
           record.runnerUp?.name ||
           "—";
-
 
         const championRecord =
           record.champion
@@ -4580,7 +5889,6 @@ function renderLeagueHistory(
 
             : "—";
 
-
         const championPoints =
           record.champion
 
@@ -4590,10 +5898,8 @@ function renderLeagueHistory(
 
             : "—";
 
-
         const regularSeason =
           record.regularSeasonChampion;
-
 
         const regularSeasonRecord =
           regularSeason
@@ -4611,7 +5917,6 @@ function renderLeagueHistory(
               )
 
             : "—";
-
 
         return `
 
@@ -4631,7 +5936,6 @@ function renderLeagueHistory(
               )}
 
             </div>
-
 
             <div>
 
@@ -4656,7 +5960,6 @@ function renderLeagueHistory(
 
             </div>
 
-
             <div class="history-champion">
 
               🏆
@@ -4665,7 +5968,6 @@ function renderLeagueHistory(
               )}
 
             </div>
-
 
             <div class="history-runner">
 
@@ -4681,9 +5983,7 @@ function renderLeagueHistory(
 
             </div>
 
-
             <div class="history-row">
-
 
               <div class="history-stat">
 
@@ -4702,7 +6002,6 @@ function renderLeagueHistory(
 
               </div>
 
-
               <div class="history-stat">
 
                 <div class="history-stat-label">
@@ -4716,7 +6015,6 @@ function renderLeagueHistory(
                 </div>
 
               </div>
-
 
               <div class="history-stat">
 
@@ -4732,7 +6030,6 @@ function renderLeagueHistory(
 
               </div>
 
-
               <div class="history-stat">
 
                 <div class="history-stat-label">
@@ -4746,7 +6043,6 @@ function renderLeagueHistory(
                 </div>
 
               </div>
-
 
               <div class="history-stat">
 
@@ -4762,7 +6058,6 @@ function renderLeagueHistory(
                 </div>
 
               </div>
-
 
             </div>
 
@@ -4789,13 +6084,11 @@ function renderPastChampions(
       "pastChampions"
     );
 
-
   const completed =
     history.filter(
       record =>
         record.champion
     );
-
 
   if (
     completed.length === 0
@@ -4815,7 +6108,6 @@ function renderPastChampions(
 
   }
 
-
   container.innerHTML =
     completed.map(
       record => `
@@ -4832,7 +6124,6 @@ function renderPastChampions(
 
           </div>
 
-
           <div class="history-champion">
 
             🏆
@@ -4842,7 +6133,6 @@ function renderPastChampions(
             )}
 
           </div>
-
 
           <div class="history-runner">
 
@@ -4859,9 +6149,7 @@ function renderPastChampions(
 
           </div>
 
-
           <div class="history-row">
-
 
             <div class="history-stat">
 
@@ -4885,7 +6173,6 @@ function renderPastChampions(
 
             </div>
 
-
             <div class="history-stat">
 
               <div class="history-stat-label">
@@ -4901,7 +6188,6 @@ function renderPastChampions(
               </div>
 
             </div>
-
 
           </div>
 
