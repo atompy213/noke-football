@@ -1,0 +1,64 @@
+name: Remove Positional Ranks
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  remove-ranks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Remove positional rank displays
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          marker = 'function getPositionalRank(player) {'
+          if marker not in text:
+              raise SystemExit("Could not find getPositionalRank function")
+
+          # Keep the existing calls intact, but make the function return the
+          # sentinel value that the existing UI already treats as "no rank".
+          if 'function getPositionalRank(player) {\n  return "—";' not in text:
+              text = text.replace(
+                  marker,
+                  marker + '\n  return "—";',
+                  1,
+              )
+
+          # Remove the Player Information rank field itself.
+          text, count = re.subn(
+              r'\s*\$\{infoItem\(\s*"Positional Rank"\s*,\s*getPositionalRank\(\s*player\s*\)\s*\)\}\s*',
+              '\n',
+              text,
+              count=1,
+              flags=re.DOTALL,
+          )
+
+          if count != 1:
+              raise SystemExit(f"Expected to remove 1 Player Information rank field, removed {count}")
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit changes and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git rm .github/workflows/remove-positional-ranks.yml
+          git add index.html
+
+          git diff --cached --quiet && exit 0
+          git commit -m "Remove positional rank displays"
+          git push
