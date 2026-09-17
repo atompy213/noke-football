@@ -23,31 +23,61 @@ jobs:
           path = Path("index.html")
           text = path.read_text(encoding="utf-8")
 
-          marker = 'function getPositionalRank(player) {'
-          if marker not in text:
+          # Find the function even if its whitespace/line breaks differ.
+          match = re.search(r'function\s+getPositionalRank\s*\(', text)
+          if not match:
               raise SystemExit("Could not find getPositionalRank function")
 
-          # Keep the existing calls intact, but make the function return the
-          # sentinel value that the existing UI already treats as "no rank".
-          if 'function getPositionalRank(player) {\n  return "—";' not in text:
-              text = text.replace(
-                  marker,
-                  marker + '\n  return "—";',
-                  1,
-              )
+          brace = text.find("{", match.end())
+          if brace == -1:
+              raise SystemExit("Could not find getPositionalRank function body")
 
-          # Remove the Player Information rank field itself.
-          text, count = re.subn(
-              r'\s*\$\{infoItem\(\s*"Positional Rank"\s*,\s*getPositionalRank\(\s*player\s*\)\s*\)\}\s*',
-              '\n',
-              text,
-              count=1,
-              flags=re.DOTALL,
-          )
+          # Find the matching closing brace for the function body.
+          depth = 0
+          quote = None
+          escape = False
+          end = None
+          for i in range(brace, len(text)):
+              ch = text[i]
+              if quote:
+                  if escape:
+                      escape = False
+                  elif ch == "\\":
+                      escape = True
+                  elif ch == quote:
+                      quote = None
+                  continue
+              if ch in ('"', "'", "`"):
+                  quote = ch
+              elif ch == "{":
+                  depth += 1
+              elif ch == "}":
+                  depth -= 1
+                  if depth == 0:
+                      end = i + 1
+                      break
 
-          if count != 1:
-              raise SystemExit(f"Expected to remove 1 Player Information rank field, removed {count}")
+          if end is None:
+              raise SystemExit("Could not parse getPositionalRank function body")
 
+          replacement = text[match.start():brace] + '{\n  return "—";\n}'
+          text = text[:match.start()] + replacement + text[end:]
+
+          # Remove the Player Information rank field by finding its enclosing
+          # template expression rather than relying on exact indentation.
+          label = text.find('"Positional Rank"')
+          if label == -1:
+              raise SystemExit("Could not find Player Information rank field")
+
+          start = text.rfind('${infoItem(', 0, label)
+          if start == -1:
+              raise SystemExit("Could not find start of Player Information rank field")
+
+          close = text.find(')}', label)
+          if close == -1:
+              raise SystemExit("Could not find end of Player Information rank field")
+
+          text = text[:start] + text[close + 2:]
           path.write_text(text, encoding="utf-8")
           PY
 
